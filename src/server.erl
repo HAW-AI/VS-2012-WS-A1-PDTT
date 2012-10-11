@@ -18,15 +18,21 @@ loop(State) ->
     {getmessages, PID} ->
       logging("server.log", io_lib:format("Get messages from PID: ~p ~n", [PID])),
       loop(State);
+
     {dropmessage, {Message, Number}} ->
       logging("server.log", io_lib:format("Drop message {~p , ~p}~n", [Message, Number])),
       loop(State);
+
     {getmsgeid, PID} ->
-      logging("server.log", io_lib:format("Get message ID ~p ~n", [PID])),
-      loop(State);
+      MsgID = State#state.current_message_number,
+      logging("server.log", io_lib:format("Message ID ~p give to ~p ~n", [MsgID, PID])),
+      PID ! MsgID,
+      loop(State#state{current_message_number=(MsgID + 1)});
+
     Unknown ->
       logging("server.log", io_lib:format("Got unknown Message ~p ~n", [Unknown])),
       loop(State)
+
   after Lifetime * 1000 ->
     logging("server.log", io_lib:format("Server Lifetime timeout after: ~p seconds ~n", [Lifetime]))
   end.
