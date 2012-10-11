@@ -34,7 +34,8 @@ loop(State) ->
       loop(State)
 
   after Lifetime * 1000 ->
-    logging("server.log", io_lib:format("Server Lifetime timeout after: ~p seconds ~n", [Lifetime]))
+    logging("server.log", io_lib:format("Server Lifetime timeout after: ~p seconds ~n", [Lifetime])),
+    exit(shutdown)
   end.
 
 stop() ->
