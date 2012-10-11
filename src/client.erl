@@ -4,17 +4,39 @@
 -compile([export_all]).
 
 start(ServerPID) ->
-  ClientPID = spawn(fun() -> loop(redakteur, ServerPID) end),
+  ClientPID = spawn(fun() -> editor(ServerPID, 5) end),
   ClientPID.
 
-redakteur() ->
-  ok.
+editor(ServerPID, NumberOfMessagesLeft) ->
+  ServerPID ! {getmsgeid, self()},
+
+  receive
+    MsgID when is_integer(MsgID) ; MsgID >= 0 ->
+      Message = {self(), inet:gethostname(), 2, 6, timeMilliSecond()},
+      ServerPID ! {dropmessage, {Message, MsgID}},
+      logging("client.log", io_lib:format("Sent message ~p to ~p ~n", [Message, ServerPID])),
+      case NumberOfMessagesLeft - 1 of
+        0 -> reader(ServerPID);
+        _ -> editor(ServerPID, NumberOfMessagesLeft - 1)
+      end;
+
+    Unknown ->
+      logging("client.log", io_lib:format("Got unknown Message ~p ~n", [Unknown])),
+      editor(ServerPID, NumberOfMessagesLeft)
+  end.
 
 
-leser() ->
-  ok.
+reader(ServerPID) ->
+  ServerPID ! {getmessages, self()},
+  receive
+    {Message, HasMessagesLeft} ->
+      logging("client.log", io_lib:format("Got Message ~p. messages left: ~p. ~n", [Message, HasMessagesLeft])),
+      case HasMessagesLeft of
+        true -> reader(ServerPID);
+        _ -> editor(ServerPID, 5)
+      end;
 
-loop(ClientType, ServerPID) ->
-  ServerPID ! {foo},
-  timer:sleep(5000),
-  loop(ClientType, ServerPID).
+    Unknown ->
+      logging("client.log", io_lib:format("Got unknown Message ~p ~n", [Unknown])),
+      reader(ServerPID)
+  end.
