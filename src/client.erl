@@ -16,5 +16,5 @@ leser() ->
 
 loop(ClientType, ServerPID) ->
   ServerPID ! {foo},
-  erlang:sleep(5000),
+  timer:sleep(5000),
   loop(ClientType, ServerPID).
