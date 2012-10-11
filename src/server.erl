@@ -3,7 +3,10 @@
 
 -compile([export_all]).
 -record(state, {config,
-                current_message_number=0}).
+                current_message_number=0,
+                clients=dict:new()}).
+-record(client_info, {last_activity,
+                      last_message_id}).
 
 start() ->
   {ok, Config} = file:consult("../server.cfg"),
@@ -30,7 +33,9 @@ loop(State) ->
       MsgID = State#state.current_message_number,
       logging("server.log", io_lib:format("Message ID ~p give to ~p ~n", [MsgID, PID])),
       PID ! MsgID,
-      loop(State#state{current_message_number=(MsgID + 1)});
+      UpdatedState = register_client_activity(PID, State#state.clients),
+      logging("server.log", io_lib:format("Updated State: ~p ~n", [UpdatedState])),
+      loop(UpdatedState#state{current_message_number=(MsgID + 1)});
 
     Unknown ->
       logging("server.log", io_lib:format("Got unknown Message ~p ~n", [Unknown])),
@@ -43,3 +48,12 @@ loop(State) ->
 
 stop() ->
     ok.
+
+%% private functions
+register_client_activity(Client, State) ->
+  UpdatedClients =
+    dict:update(Client,
+                fun(Old) -> Old#client_info{last_activity=timeMilliSecond()} end,
+                {timeMilliSecond(), -1},
+                State),
+  State#state{clients=UpdatedClients}.
