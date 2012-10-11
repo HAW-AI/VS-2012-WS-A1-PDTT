@@ -7,9 +7,12 @@
 
 start() ->
   {ok, Config} = file:consult("../server.cfg"),
-  Server = spawn(fun() -> loop(_State = #state{config=Config}) end),
-  logging("server.log", io_lib:format("Server Startzeit: ~p mit PID ~p ~n", [timeMilliSecond(), Server])),
-  Server.
+  State = #state{config=Config},
+  ServerPID = spawn(fun() -> loop(State) end),
+  {ok, ServerName} = orddict:find(servername, State#state.config),
+  register(ServerName, ServerPID),
+  logging("server.log", io_lib:format("Server Startzeit: ~p mit PID ~p ~n", [timeMilliSecond(), ServerPID])),
+  ServerPID.
 
 loop(State) ->
   {ok, Lifetime} = orddict:find(lifetime, State#state.config),
