@@ -7,7 +7,7 @@
 
 start() ->
   {ok, Config} = file:consult("../server.cfg"),
-  Server = spawn(fun() -> loop(State = #state{config=Config}) end),
+  Server = spawn(fun() -> loop(_State = #state{config=Config}) end),
   logging("server.log", io_lib:format("Server Startzeit: ~p mit PID ~p ~n", [timeMilliSecond(), Server])),
   Server.
 
