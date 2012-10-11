@@ -33,7 +33,7 @@ loop(State) ->
       MsgID = State#state.current_message_number,
       logging("server.log", io_lib:format("Message ID ~p give to ~p ~n", [MsgID, PID])),
       PID ! MsgID,
-      UpdatedState = register_client_activity(PID, State#state.clients),
+      UpdatedState = register_client_activity(PID, State),
       logging("server.log", io_lib:format("Updated State: ~p ~n", [UpdatedState])),
       loop(UpdatedState#state{current_message_number=(MsgID + 1)});
 
@@ -54,6 +54,6 @@ register_client_activity(Client, State) ->
   UpdatedClients =
     dict:update(Client,
                 fun(Old) -> Old#client_info{last_activity=timeMilliSecond()} end,
-                {timeMilliSecond(), -1},
-                State),
+                #client_info{last_activity=timeMilliSecond(), last_message_id=-1},
+                State#state.clients),
   State#state{clients=UpdatedClients}.
