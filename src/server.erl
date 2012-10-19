@@ -29,9 +29,9 @@ loop(State) ->
 
     {dropmessage, {Message, Number}} ->
       logging("server.log", io_lib:format("Drop message {~p , ~p}~n", [Message, Number])),
-      UpdatedHoldBackQueue = dict:append(Number, Message, State#state.hold_back_queue,
-      case should_update_delivery_queue(UpdatedHoldBackQueue, State#state.delivery_queue) of
-        true -> loop(State);
+      UpdatedHoldBackQueue = dict:append(Number, Message, State#state.hold_back_queue),
+      case should_update_delivery_queue(UpdatedHoldBackQueue, State#state.delivery_queue, delivery_queue_limit(State)) of
+        true -> loop(update_delivery_queue(State));
         _    -> loop(State#state{hold_back_queue=UpdatedHoldBackQueue})
       end;
 
@@ -63,3 +63,20 @@ register_client_activity(Client, State) ->
                 #client_info{last_activity=timeMilliSecond(), last_message_id=-1},
                 State#state.clients),
   State#state{clients=UpdatedClients}.
+
+should_update_delivery_queue(HoldBackQueue, DeliveryQueue, DeliveryQueueLimit) ->
+  dict:size(HoldBackQueue) >= DeliveryQueueLimit/2.
+
+delivery_queue_limit(State) ->
+  orddict:find(dlqlimit, State#state.config).
+
+first_message_id(Queue) ->
+  lists:foldl(fun({Message, Number}, SmallestID) -> min(Number, SmallestID) end, void, queue:to_list(Queue)).
+
+update_delivery_queue(State) ->
+  % neue sachen aus der HoldBackQueue rausholen
+  
+  % differenz delivery_queue_limit und aus der DeliveryQueue rauswerfen
+  % aus der HoldBackQueue elemente an DeliveryQueue anfuegen. bis zur naechsten luecke.
+  % angefuegte elemente aus der HoldBackQueue entfernen
+  ok.
