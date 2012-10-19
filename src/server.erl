@@ -5,7 +5,7 @@
 -record(state, {config,
                 current_message_number=0,
                 clients=dict:new(),
-                hold_back_queue=dict:new(),
+                hold_back_queue=orddict:new(),
                 delivery_queue=queue:new()}).
 -record(client_info, {last_activity,
                       last_message_id}).
@@ -73,9 +73,25 @@ delivery_queue_limit(State) ->
 first_message_id(Queue) ->
   lists:foldl(fun({Message, Number}, SmallestID) -> min(Number, SmallestID) end, void, queue:to_list(Queue)).
 
+last_message_id(Queue) ->
+  lists:foldl(fun({Message, Number}, SmallestID) -> max(Number, SmallestID) end, void, queue:to_list(Queue)).
+
+extract_message_sequence(HoldBackQueue, DeliveryQueue) ->
+  LastID = case last_message_id(DeliveryQueue) of
+             void -> 0;
+             ID   -> ID
+           end,
+  {_, Seq} = orddict:fold(fun(ID, Message, {LastID, Seq}) ->
+                            if
+                              ID == LastID+1 -> {ID, [ID | Seq]};
+                              true           -> {LastID, Seq}
+                            end
+                          end, {LastID, []}, HoldBackQueue),
+  lists:sort(Seq).
+
 update_delivery_queue(State) ->
   % neue sachen aus der HoldBackQueue rausholen
-  
+  MessageSequence = extract_message_sequence(State#state.hold_back_queue, State#state.delivery_queue),
   % differenz delivery_queue_limit und aus der DeliveryQueue rauswerfen
   % aus der HoldBackQueue elemente an DeliveryQueue anfuegen. bis zur naechsten luecke.
   % angefuegte elemente aus der HoldBackQueue entfernen
