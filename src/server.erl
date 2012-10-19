@@ -29,7 +29,7 @@ loop(State) ->
 
     {dropmessage, {Message, Number}} ->
       logging("server.log", io_lib:format("Drop message {~p , ~p}~n", [Message, Number])),
-      UpdatedHoldBackQueue = dict:append(Number, Message, State#state.hold_back_queue),
+      UpdatedHoldBackQueue = orddict:append(Number, Message, State#state.hold_back_queue),
       case should_update_delivery_queue(UpdatedHoldBackQueue, State#state.delivery_queue, delivery_queue_limit(State)) of
         true -> loop(update_delivery_queue(State));
         _    -> loop(State#state{hold_back_queue=UpdatedHoldBackQueue})
@@ -65,10 +65,13 @@ register_client_activity(Client, State) ->
   State#state{clients=UpdatedClients}.
 
 should_update_delivery_queue(HoldBackQueue, DeliveryQueue, DeliveryQueueLimit) ->
-  dict:size(HoldBackQueue) >= DeliveryQueueLimit/2.
+  logging("server.log", io_lib:format("DeliveryQueueLimit: ~p ~n", [DeliveryQueueLimit])),
+  orddict:size(HoldBackQueue) >= DeliveryQueueLimit div 2.
 
 delivery_queue_limit(State) ->
-  orddict:find(dlqlimit, State#state.config).
+  logging("server.log", io_lib:format("dlqlimit: ~p ~n", [orddict:find(dlqlimit, State#state.config)])),
+  {ok, Limit} = orddict:find(dlqlimit, State#state.config),
+  Limit.
 
 first_message_id(Queue) ->
   lists:foldl(fun({Message, Number}, SmallestID) -> min(Number, SmallestID) end, void, queue:to_list(Queue)).
@@ -83,7 +86,7 @@ extract_message_sequence(HoldBackQueue, DeliveryQueue) ->
            end,
   {_, Seq} = orddict:fold(fun(ID, Message, {LastID, Seq}) ->
                             if
-                              ID == LastID+1 -> {ID, [ID | Seq]};
+                              ID == LastID+1 -> {ID, [{Message, ID} | Seq]};
                               true           -> {LastID, Seq}
                             end
                           end, {LastID, []}, HoldBackQueue),
@@ -93,6 +96,14 @@ update_delivery_queue(State) ->
   % neue sachen aus der HoldBackQueue rausholen
   MessageSequence = extract_message_sequence(State#state.hold_back_queue, State#state.delivery_queue),
   % differenz delivery_queue_limit und aus der DeliveryQueue rauswerfen
+  {_, ResizedDeliveryQueue} = queue:split(queue:len(State#state.delivery_queue), State#state.delivery_queue),
+  UpdatedDeliveryQueue = queue:join(ResizedDeliveryQueue, queue:from_list(MessageSequence)),
   % aus der HoldBackQueue elemente an DeliveryQueue anfuegen. bis zur naechsten luecke.
   % angefuegte elemente aus der HoldBackQueue entfernen
-  ok.
+  UpdatedHoldBackQueue = lists:foldl(fun({Message, ID}, HoldBackQueue) ->
+                           orddict:erase(ID, HoldBackQueue)
+                         end,
+                         State#state.hold_back_queue,
+                         MessageSequence),
+  State#state{delivery_queue=UpdatedDeliveryQueue,
+              hold_back_queue=UpdatedHoldBackQueue}.
