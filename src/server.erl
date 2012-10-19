@@ -4,7 +4,9 @@
 -compile([export_all]).
 -record(state, {config,
                 current_message_number=0,
-                clients=dict:new()}).
+                clients=dict:new(),
+                hold_back_queue=dict:new(),
+                delivery_queue=queue:new()}).
 -record(client_info, {last_activity,
                       last_message_id}).
 
@@ -27,7 +29,11 @@ loop(State) ->
 
     {dropmessage, {Message, Number}} ->
       logging("server.log", io_lib:format("Drop message {~p , ~p}~n", [Message, Number])),
-      loop(State);
+      UpdatedHoldBackQueue = dict:append(Number, Message, State#state.hold_back_queue,
+      case should_update_delivery_queue(UpdatedHoldBackQueue, State#state.delivery_queue) of
+        true -> loop(State);
+        _    -> loop(State#state{hold_back_queue=UpdatedHoldBackQueue})
+      end;
 
     {getmsgeid, PID} ->
       MsgID = State#state.current_message_number,
