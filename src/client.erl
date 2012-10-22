@@ -1,13 +1,16 @@
 -module(client).
--import(werkzeug, [get_config_value/2,logging/2,timeMilliSecond/0,delete_last/1]).
+-import(werkzeug, [logging/2,timeMilliSecond/0]).
 
 -compile([export_all]).
 
-start(ServerPID) ->
-  ClientPID = spawn(fun() -> editor(ServerPID, 5) end),
+start() ->
+  {ok, Config} = file:consult("../client.cfg"),
+  {servername, Servername} = lists:keyfind(servername, 1, Config),
+  ClientPID = spawn(fun() -> editor(Servername, 5, Config) end),
+  logging("client.log", io_lib:format("Client started at PID: ~p ~n", [ClientPID])),
   ClientPID.
 
-editor(ServerPID, NumberOfMessagesLeft) ->
+editor(ServerPID, NumberOfMessagesLeft, Config) ->
   ServerPID ! {getmsgeid, self()},
 
   receive
@@ -16,27 +19,27 @@ editor(ServerPID, NumberOfMessagesLeft) ->
       ServerPID ! {dropmessage, {Message, MsgID}},
       logging("client.log", io_lib:format("Sent message ~p to ~p ~n", [Message, ServerPID])),
       case NumberOfMessagesLeft - 1 of
-        0 -> reader(ServerPID);
-        _ -> editor(ServerPID, NumberOfMessagesLeft - 1)
+        0 -> reader(ServerPID, Config);
+        _ -> editor(ServerPID, NumberOfMessagesLeft - 1, Config)
       end;
 
     Unknown ->
       logging("client.log", io_lib:format("Got unknown Message ~p ~n", [Unknown])),
-      editor(ServerPID, NumberOfMessagesLeft)
+      editor(ServerPID, NumberOfMessagesLeft, Config)
   end.
 
 
-reader(ServerPID) ->
+reader(ServerPID, Config) ->
   ServerPID ! {getmessages, self()},
   receive
     {Message, HasMessagesLeft} ->
       logging("client.log", io_lib:format("Got Message ~p. messages left: ~p. ~n", [Message, HasMessagesLeft])),
       case HasMessagesLeft of
-        true -> reader(ServerPID);
-        _ -> editor(ServerPID, 5)
+        true -> reader(ServerPID, Config);
+        _ -> editor(ServerPID, 5, Config)
       end;
 
     Unknown ->
       logging("client.log", io_lib:format("Got unknown Message ~p ~n", [Unknown])),
-      reader(ServerPID)
+      reader(ServerPID, Config)
   end.
