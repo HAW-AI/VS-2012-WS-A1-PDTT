@@ -1,5 +1,5 @@
 -module(server).
--import(werkzeug, [get_config_value/2,logging/2,timeMilliSecond/0]).
+-import(werkzeug, [logging/2,timeMilliSecond/0]).
 
 -compile([export_all]).
 
@@ -16,14 +16,21 @@
 start() ->
   {ok, Config} = file:consult("../server.cfg"),
   State = #state{config=Config},
+
   ServerPID = spawn(fun() -> loop(State) end),
   {servername, ServerName} = lists:keyfind(servername, 1, State#state.config),
   register(ServerName, ServerPID),
+
   logging("server.log", io_lib:format("Server Startzeit: ~p mit PID ~p ~n", [timeMilliSecond(), ServerPID])),
+
+  % exit server after lifetime which is specified in the config
+  {lifetime, Lifetime} = lists:keyfind(lifetime, 1, Config),
+  timer:apply_after(timer:seconds(Lifetime), ?MODULE, stop, [Lifetime, ServerPID]),
+
   ServerPID.
 
 loop(State) ->
-  {lifetime, Lifetime} = lists:keyfind(lifetime, 1, State#state.config),
+  {difftime, Difftime} = lists:keyfind(difftime, 1, State#state.config),
 
   receive
     {getmessages, PID} ->
@@ -54,13 +61,15 @@ loop(State) ->
       logging("server.log", io_lib:format("Got unknown Message ~p ~n", [Unknown])),
       loop(State)
 
-  after Lifetime * 1000 ->
-    logging("server.log", io_lib:format("Server Lifetime timeout after: ~p seconds ~n", [Lifetime])),
+  after timer:seconds(Difftime) ->
+    logging("server.log", io_lib:format("Difftime timeout. Fuer ~p Sekunden keine Nachrichten erhalten. ~n",
+                                        [Difftime])),
     exit(shutdown)
   end.
 
-stop() ->
-    ok.
+stop(Lifetime, ServerPID) ->
+  logging("server.log", io_lib:format("Server Lifetime timeout after: ~p seconds ~n", [Lifetime])),
+  exit(ServerPID, shutdown).
 
 %% private functions
 register_client_activity(Client, State) ->
