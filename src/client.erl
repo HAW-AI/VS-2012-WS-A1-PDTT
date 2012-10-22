@@ -9,6 +9,8 @@ start() ->
   ClientPID = spawn(fun() -> editor(Servername, 5, Config) end),
   logging("client.log", io_lib:format("Client Startzeit: ~p mit PID ~p ~n",
                                       [timeMilliSecond(), ClientPID])),
+  {lifetime, Lifetime} = lists:keyfind(lifetime, 1, Config),
+  timer:apply_after(timer:seconds(Lifetime), ?MODULE, stop, [Lifetime, ClientPID]),
   ClientPID.
 
 editor(ServerPID, NumberOfMessagesLeft, Config) ->
@@ -47,3 +49,7 @@ reader(ServerPID, Config) ->
       logging("client.log", io_lib:format("Got unknown Message ~p ~n", [Unknown])),
       reader(ServerPID, Config)
   end.
+
+stop(Lifetime, ClientPID) ->
+  logging("client.log", io_lib:format("Client Lifetime timeout after: ~p seconds ~n", [Lifetime])),
+  exit(ClientPID, shutdown).
