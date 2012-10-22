@@ -1,5 +1,5 @@
 -module(server).
--import(werkzeug, [get_config_value/2,logging/2,timeMilliSecond/0,delete_last/1]).
+-import(werkzeug, [get_config_value/2,logging/2,timeMilliSecond/0]).
 
 -compile([export_all]).
 
@@ -88,10 +88,10 @@ client_lifetime(State) ->
   Lifetime.
 
 first_message_id(DeliveryQueue) ->
-  lists:foldl(fun(Number, Message, SmallestID) -> min(Number, SmallestID) end, void, DeliveryQueue).
+  lists:foldl(fun(Number, _, SmallestID) -> min(Number, SmallestID) end, void, DeliveryQueue).
 
 last_message_id(DeliveryQueue) ->
-  lists:foldl(fun(Number, Message, SmallestID) -> max(Number, SmallestID) end, void, DeliveryQueue).
+  lists:foldl(fun(Number, _, SmallestID) -> max(Number, SmallestID) end, void, DeliveryQueue).
 
 extract_message_sequence(HoldBackQueue, DeliveryQueue) ->
   LastID = case last_message_id(DeliveryQueue) of
@@ -115,7 +115,7 @@ update_delivery_queue(State) ->
   UpdatedDeliveryQueue = orddict:from_list(lists:append(ResizedDeliveryQueueList, MessageSequence)),
   % aus der HoldBackQueue elemente an DeliveryQueue anfuegen. bis zur naechsten luecke.
   % angefuegte elemente aus der HoldBackQueue entfernen
-  UpdatedHoldBackQueue = lists:foldl(fun({Message, ID}, HoldBackQueue) ->
+  UpdatedHoldBackQueue = lists:foldl(fun({_, ID}, HoldBackQueue) ->
                            orddict:erase(ID, HoldBackQueue)
                          end,
                          State#state.hold_back_queue,
