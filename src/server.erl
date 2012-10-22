@@ -14,13 +14,13 @@ start() ->
   {ok, Config} = file:consult("../server.cfg"),
   State = #state{config=Config},
   ServerPID = spawn(fun() -> loop(State) end),
-  {ok, ServerName} = orddict:find(servername, State#state.config),
+  {servername, ServerName} = lists:keyfind(servername, 1, State#state.config),
   register(ServerName, ServerPID),
   logging("server.log", io_lib:format("Server Startzeit: ~p mit PID ~p ~n", [timeMilliSecond(), ServerPID])),
   ServerPID.
 
 loop(State) ->
-  {ok, Lifetime} = orddict:find(lifetime, State#state.config),
+  {lifetime, Lifetime} = lists:keyfind(lifetime, 1, State#state.config),
 
   receive
     {getmessages, PID} ->
@@ -69,8 +69,7 @@ should_update_delivery_queue(HoldBackQueue, DeliveryQueue, DeliveryQueueLimit) -
   orddict:size(HoldBackQueue) >= DeliveryQueueLimit div 2.
 
 delivery_queue_limit(State) ->
-  logging("server.log", io_lib:format("dlqlimit: ~p ~n", [orddict:find(dlqlimit, State#state.config)])),
-  {ok, Limit} = orddict:find(dlqlimit, State#state.config),
+  {dlqlimit, Limit} = lists:keyfind(dlqlimit, 1, State#state.config),
   Limit.
 
 first_message_id(Queue) ->
