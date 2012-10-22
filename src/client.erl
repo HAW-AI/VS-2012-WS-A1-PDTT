@@ -7,7 +7,8 @@ start() ->
   {ok, Config} = file:consult("../client.cfg"),
   {servername, Servername} = lists:keyfind(servername, 1, Config),
   ClientPID = spawn(fun() -> editor(Servername, 5, Config) end),
-  logging("client.log", io_lib:format("Client started at PID: ~p ~n", [ClientPID])),
+  logging("client.log", io_lib:format("Client Startzeit: ~p mit PID ~p ~n",
+                                      [timeMilliSecond(), ClientPID])),
   ClientPID.
 
 editor(ServerPID, NumberOfMessagesLeft, Config) ->
@@ -20,7 +21,10 @@ editor(ServerPID, NumberOfMessagesLeft, Config) ->
       logging("client.log", io_lib:format("Sent message ~p to ~p ~n", [Message, ServerPID])),
       case NumberOfMessagesLeft - 1 of
         0 -> reader(ServerPID, Config);
-        _ -> editor(ServerPID, NumberOfMessagesLeft - 1, Config)
+        _ ->
+          {sendeintervall, Interval} = lists:keyfind(sendeintervall, 1, Config),
+          timer:sleep(Interval * 1000),
+          editor(ServerPID, NumberOfMessagesLeft - 1, Config)
       end;
 
     Unknown ->
