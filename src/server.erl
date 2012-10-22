@@ -2,12 +2,15 @@
 -import(werkzeug, [get_config_value/2,logging/2,timeMilliSecond/0,delete_last/1]).
 
 -compile([export_all]).
+
+-define(FIRST_MESSAGE_ID, 1).
+
 -record(state, {config,
-                current_message_number=0,
+                current_message_number=?FIRST_MESSAGE_ID-1,
                 clients=dict:new(),
                 hold_back_queue=orddict:new(),
-                delivery_queue=queue:new()}).
--record(client_info, {last_activity,
+                delivery_queue=orddict:new()}).
+-record(client_info, {timer_ref,
                       last_message_id}).
 
 start() ->
@@ -30,7 +33,7 @@ loop(State) ->
     {dropmessage, {Message, Number}} ->
       logging("server.log", io_lib:format("Drop message {~p , ~p}~n", [Message, Number])),
       UpdatedHoldBackQueue = orddict:append(Number, Message, State#state.hold_back_queue),
-      case should_update_delivery_queue(UpdatedHoldBackQueue, State#state.delivery_queue, delivery_queue_limit(State)) of
+      case should_update_delivery_queue(UpdatedHoldBackQueue, delivery_queue_limit(State)) of
         true -> loop(update_delivery_queue(State));
         _    -> loop(State#state{hold_back_queue=UpdatedHoldBackQueue})
       end;
@@ -42,6 +45,10 @@ loop(State) ->
       UpdatedState = register_client_activity(PID, State),
       logging("server.log", io_lib:format("Updated State: ~p ~n", [UpdatedState])),
       loop(UpdatedState#state{current_message_number=(MsgID + 1)});
+
+    {forget_client, PID} ->
+      logging("server.log", io_lib:format("Client ~p wird vergessen! *************~n", [PID])),
+      loop(State#state{clients=dict:erase(PID, State#state.clients)});
 
     Unknown ->
       logging("server.log", io_lib:format("Got unknown Message ~p ~n", [Unknown])),
@@ -57,14 +64,18 @@ stop() ->
 
 %% private functions
 register_client_activity(Client, State) ->
+  {ok, TimerRef} = timer:send_after(client_lifetime(State), {forget_client, Client}),
   UpdatedClients =
     dict:update(Client,
-                fun(Old) -> Old#client_info{last_activity=timeMilliSecond()} end,
-                #client_info{last_activity=timeMilliSecond(), last_message_id=-1},
+                fun(Old) ->
+                    timer:cancel(Old#client_info.timer_ref),
+                    Old#client_info{timer_ref=TimerRef}
+                end,
+                #client_info{timer_ref=TimerRef, last_message_id=?FIRST_MESSAGE_ID-1},
                 State#state.clients),
   State#state{clients=UpdatedClients}.
 
-should_update_delivery_queue(HoldBackQueue, DeliveryQueue, DeliveryQueueLimit) ->
+should_update_delivery_queue(HoldBackQueue, DeliveryQueueLimit) ->
   logging("server.log", io_lib:format("DeliveryQueueLimit: ~p ~n", [DeliveryQueueLimit])),
   orddict:size(HoldBackQueue) >= DeliveryQueueLimit div 2.
 
@@ -72,15 +83,19 @@ delivery_queue_limit(State) ->
   {dlqlimit, Limit} = lists:keyfind(dlqlimit, 1, State#state.config),
   Limit.
 
-first_message_id(Queue) ->
-  lists:foldl(fun({Message, Number}, SmallestID) -> min(Number, SmallestID) end, void, queue:to_list(Queue)).
+client_lifetime(State) ->
+  {clientlifetime, Lifetime} = lists:keyfind(clientlifetime, 1, State#state.config),
+  Lifetime.
 
-last_message_id(Queue) ->
-  lists:foldl(fun({Message, Number}, SmallestID) -> max(Number, SmallestID) end, void, queue:to_list(Queue)).
+first_message_id(DeliveryQueue) ->
+  lists:foldl(fun(Number, Message, SmallestID) -> min(Number, SmallestID) end, void, DeliveryQueue).
+
+last_message_id(DeliveryQueue) ->
+  lists:foldl(fun(Number, Message, SmallestID) -> max(Number, SmallestID) end, void, DeliveryQueue).
 
 extract_message_sequence(HoldBackQueue, DeliveryQueue) ->
   LastID = case last_message_id(DeliveryQueue) of
-             void -> 0;
+             void -> ?FIRST_MESSAGE_ID-1;
              ID   -> ID
            end,
   {_, Seq} = orddict:fold(fun(ID, Message, {LastID, Seq}) ->
@@ -95,8 +110,9 @@ update_delivery_queue(State) ->
   % neue sachen aus der HoldBackQueue rausholen
   MessageSequence = extract_message_sequence(State#state.hold_back_queue, State#state.delivery_queue),
   % differenz delivery_queue_limit und aus der DeliveryQueue rauswerfen
-  {_, ResizedDeliveryQueue} = queue:split(queue:len(State#state.delivery_queue), State#state.delivery_queue),
-  UpdatedDeliveryQueue = queue:join(ResizedDeliveryQueue, queue:from_list(MessageSequence)),
+  DeliveryQueueList = orddict:to_list(State#state.delivery_queue),
+  ResizedDeliveryQueueList = lists:nthtail(length(DeliveryQueueList), DeliveryQueueList),
+  UpdatedDeliveryQueue = orddict:from_list(lists:append(ResizedDeliveryQueueList, MessageSequence)),
   % aus der HoldBackQueue elemente an DeliveryQueue anfuegen. bis zur naechsten luecke.
   % angefuegte elemente aus der HoldBackQueue entfernen
   UpdatedHoldBackQueue = lists:foldl(fun({Message, ID}, HoldBackQueue) ->
