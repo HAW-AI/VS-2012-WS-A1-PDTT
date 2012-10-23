@@ -98,10 +98,10 @@ client_lifetime(State) ->
   Lifetime.
 
 first_message_id(DeliveryQueue) ->
-  lists:foldl(fun(Number, _, SmallestID) -> min(Number, SmallestID) end, void, DeliveryQueue).
+  orddict:fold(fun(Number, _, SmallestID) -> min(Number, SmallestID) end, void, DeliveryQueue).
 
 last_message_id(DeliveryQueue) ->
-  lists:foldl(fun(Number, _, SmallestID) -> max(Number, SmallestID) end, void, DeliveryQueue).
+  orddict:fold(fun(Number, _, SmallestID) -> max(Number, SmallestID) end, void, DeliveryQueue).
 
 extract_message_sequence(HoldBackQueue, DeliveryQueue) ->
   LastID = case last_message_id(DeliveryQueue) of
