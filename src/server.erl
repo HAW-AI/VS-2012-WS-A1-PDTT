@@ -112,9 +112,7 @@ last_message_id(DeliveryQueue) ->
                  end
                end, void, DeliveryQueue).
 
-extract_message_sequence(HoldBackQueue, DeliveryQueue, FirstID) ->
-  io:format("hbq: ~p~n", [HoldBackQueue]),
-  io:format("FirstID: ~p~n", [FirstID]),
+extract_message_sequence(HoldBackQueue, FirstID) ->
   {_, Seq} = orddict:fold(fun(ID, Message, {LastID, Seq}) ->
                             io:format("ID: ~p~n", [ID]),
                             if
@@ -122,7 +120,7 @@ extract_message_sequence(HoldBackQueue, DeliveryQueue, FirstID) ->
                               true           -> {LastID, Seq}
                             end
                           end, {FirstID-1, []}, HoldBackQueue),
-  lists:sort(Seq).
+  lists:reverse(Seq).
 
 update_delivery_queue(HBQ, DLQ) ->
   % neue sachen aus der HoldBackQueue rausholen
@@ -130,7 +128,7 @@ update_delivery_queue(HBQ, DLQ) ->
               void -> ?FIRST_MESSAGE_ID;
               ID   -> ID+1
             end,
-  MsgSeq = extract_message_sequence(HBQ, DLQ, FirstID),
+  MsgSeq = extract_message_sequence(HBQ, FirstID),
 
   % add timestamp
   %UpdatedMsgSeq = lists:map(fun({ID, Message}) -> {ID, tag_message(Message, "Delivery-Queue")} end, MsgSeq),
@@ -160,10 +158,9 @@ tag_message(Message, QueueName) ->
 
 extract_message_sequence_test_() ->
   HBQ = orddict:from_list([{4, "foo"}, {5, "bar"}, {3, "baz"}, {7, "nada"}]),
-  DLQ = orddict:new(),
 
-  [ ?_assertEqual([], extract_message_sequence(HBQ, DLQ, 1))
-  , ?_assertEqual([{3, "baz"}, {4, "foo"}, {5, "bar"}], extract_message_sequence(HBQ, DLQ, 3))
+  [ ?_assertEqual([], extract_message_sequence(HBQ, 1))
+  , ?_assertEqual([{3, "baz"}, {4, "foo"}, {5, "bar"}], extract_message_sequence(HBQ, 3))
   ].
 
 update_delivery_queue_test_() ->
