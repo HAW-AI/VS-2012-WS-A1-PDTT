@@ -46,7 +46,8 @@ loop(State) ->
       UpdatedHoldBackQueue = orddict:append(Number, UpdatedMessage, State#state.hold_back_queue),
       case should_update_delivery_queue(UpdatedHoldBackQueue, delivery_queue_limit(State)) of
         true -> {UpdatedUpdatedHBQ, UpdatedDLQ} = update_delivery_queue(UpdatedHoldBackQueue, State#state.delivery_queue),
-                loop(State#state{hold_back_queue=UpdatedUpdatedHBQ, delivery_queue=UpdatedDLQ});
+                TaggedDLQ = tag_messages(diff_keys(UpdatedHoldBackQueue, UpdatedUpdatedHBQ), "Delivery-Queue", UpdatedDLQ),
+                loop(State#state{hold_back_queue=UpdatedUpdatedHBQ, delivery_queue=TaggedDLQ});
         _    -> loop(State#state{hold_back_queue=UpdatedHoldBackQueue})
       end;
 
@@ -148,11 +149,18 @@ update_delivery_queue(HBQ, DLQ) ->
 
   {UpdatedHBQ, UpdatedDLQ}.
 
+% add timestamp
+tag_messages(IDs, QueueName, Queue) ->
+  lists:foldl(fun(ID, Q) ->
+        orddict:update(ID, fun(Msg) -> tag_message(Msg, QueueName) end, Q)
+    end, Queue, IDs).
+
 
 tag_message(Message, QueueName) ->
   io_lib:format("~p Empfangszeit in ~p: ~p~n", [Message, QueueName, timeMilliSecond()]).
 
-
+diff_keys(Dict1, Dict2) ->
+  sets:to_list(sets:subtract(sets:from_list(orddict:fetch_keys(Dict1)), sets:from_list(orddict:fetch_keys(Dict2)))).
 
 % tests
 
@@ -173,4 +181,22 @@ update_delivery_queue_test_() ->
                   update_delivery_queue(HBQ, DLQ))
   , ?_assertEqual({orddict:erase(1, HBQ), DLQ},
                   update_delivery_queue(orddict:erase(1, HBQ), DLQ))
+  ].
+
+diff_keys_test_() ->
+  Dict = orddict:from_list([{2, "foo"}, {3, "bar"}, {1, "baz"}, {7, "nada"}]),
+
+  [ ?_assertEqual([], diff_keys(orddict:new(), orddict:new()))
+  , ?_assertEqual([], diff_keys(orddict:new(), Dict))
+  ].
+
+tag_messages_test_() ->
+  Msgs = orddict:from_list([{2, "foo"}, {3, "bar"}, {1, "baz"}, {7, "nada"}]),
+  TaggedMsgs = tag_messages([1,3], "Q", Msgs),
+
+  [ ?_assertEqual(orddict:fetch_keys(Msgs), orddict:fetch_keys(TaggedMsgs))
+  , ?_assertNotEqual(orddict:fetch(1, Msgs), orddict:fetch(1, TaggedMsgs))
+  , ?_assertEqual(orddict:fetch(2, Msgs), orddict:fetch(2, TaggedMsgs))
+  , ?_assertNotEqual(orddict:fetch(3, Msgs), orddict:fetch(3, TaggedMsgs))
+  , ?_assertEqual(orddict:fetch(7, Msgs), orddict:fetch(7, TaggedMsgs))
   ].
