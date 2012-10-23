@@ -42,17 +42,17 @@ loop(State) ->
       logging("server.log", io_lib:format("Drop message {~p , ~p}~n", [UpdatedMessage, Number])),
       UpdatedHoldBackQueue = orddict:append(Number, UpdatedMessage, State#state.hold_back_queue),
       case should_update_delivery_queue(UpdatedHoldBackQueue, delivery_queue_limit(State)) of
-        true -> loop(update_delivery_queue(State));
+        true -> loop(update_delivery_queue(State#state{hold_back_queue=UpdatedHoldBackQueue}));
         _    -> loop(State#state{hold_back_queue=UpdatedHoldBackQueue})
       end;
 
     {getmsgeid, PID} ->
-      MsgID = State#state.current_message_number,
+      MsgID = State#state.current_message_number+1,
       logging("server.log", io_lib:format("Message ID ~p give to ~p ~n", [MsgID, PID])),
       PID ! MsgID,
       UpdatedState = register_client_activity(PID, State),
       logging("server.log", io_lib:format("Updated State: ~p ~n", [UpdatedState])),
-      loop(UpdatedState#state{current_message_number=(MsgID + 1)});
+      loop(UpdatedState#state{current_message_number=MsgID});
 
     {forget_client, PID} ->
       logging("server.log", io_lib:format("Client ~p wird vergessen! *************~n", [PID])),
@@ -101,14 +101,22 @@ first_message_id(DeliveryQueue) ->
   orddict:fold(fun(Number, _, SmallestID) -> min(Number, SmallestID) end, void, DeliveryQueue).
 
 last_message_id(DeliveryQueue) ->
-  orddict:fold(fun(Number, _, SmallestID) -> max(Number, SmallestID) end, void, DeliveryQueue).
+  orddict:fold(fun(Number, _, SmallestID) ->
+                 if
+                   SmallestID == void -> Number;
+                   true               -> max(Number, SmallestID)
+                 end
+               end, void, DeliveryQueue).
 
 extract_message_sequence(HoldBackQueue, DeliveryQueue) ->
   LastID = case last_message_id(DeliveryQueue) of
              void -> ?FIRST_MESSAGE_ID-1;
              ID   -> ID
            end,
+  io:format("hbq: ~p~n", [HoldBackQueue]),
+  io:format("LastID: ~p~n", [LastID]),
   {_, Seq} = orddict:fold(fun(ID, Message, {LastID, Seq}) ->
+                            io:format("ID: ~p~n", [ID]),
                             if
                               ID == LastID+1 -> {ID, [{Message, ID} | Seq]};
                               true           -> {LastID, Seq}
@@ -121,11 +129,12 @@ update_delivery_queue(State) ->
   MessageSequence = extract_message_sequence(State#state.hold_back_queue, State#state.delivery_queue),
   % add timestamp
   UpdatedMessageSequence = lists:map(fun({ID, Message}) -> {ID, tag_message(Message, "Delivery-Queue")} end, MessageSequence),
-  io:format("Seq: ~p~n", [UpdatedMessageSequence]),
+  io:format("Seq: ~p~n", [MessageSequence]),
   % differenz delivery_queue_limit und aus der DeliveryQueue rauswerfen
   DeliveryQueueList = orddict:to_list(State#state.delivery_queue),
   ResizedDeliveryQueueList = lists:nthtail(length(DeliveryQueueList), DeliveryQueueList),
   UpdatedDeliveryQueue = orddict:from_list(lists:append(ResizedDeliveryQueueList, UpdatedMessageSequence)),
+  io:format("dlq BEFORE: ~p~ndlq AFTER: ~p~n", [State#state.delivery_queue, UpdatedDeliveryQueue]),
   % aus der HoldBackQueue elemente an DeliveryQueue anfuegen. bis zur naechsten luecke.
   % angefuegte elemente aus der HoldBackQueue entfernen
   UpdatedHoldBackQueue = lists:foldl(fun({_, ID}, HoldBackQueue) ->
