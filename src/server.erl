@@ -38,8 +38,9 @@ loop(State) ->
       loop(State);
 
     {dropmessage, {Message, Number}} ->
-      logging("server.log", io_lib:format("Drop message {~p , ~p}~n", [Message, Number])),
-      UpdatedHoldBackQueue = orddict:append(Number, Message, State#state.hold_back_queue),
+      UpdatedMessage = tag_message(Message, "Hold-Back-Queue"),
+      logging("server.log", io_lib:format("Drop message {~p , ~p}~n", [UpdatedMessage, Number])),
+      UpdatedHoldBackQueue = orddict:append(Number, UpdatedMessage, State#state.hold_back_queue),
       case should_update_delivery_queue(UpdatedHoldBackQueue, delivery_queue_limit(State)) of
         true -> loop(update_delivery_queue(State));
         _    -> loop(State#state{hold_back_queue=UpdatedHoldBackQueue})
@@ -118,10 +119,13 @@ extract_message_sequence(HoldBackQueue, DeliveryQueue) ->
 update_delivery_queue(State) ->
   % neue sachen aus der HoldBackQueue rausholen
   MessageSequence = extract_message_sequence(State#state.hold_back_queue, State#state.delivery_queue),
+  % add timestamp
+  UpdatedMessageSequence = lists:map(fun({ID, Message}) -> {ID, tag_message(Message, "Delivery-Queue")} end, MessageSequence),
+  io:format("Seq: ~p~n", [UpdatedMessageSequence]),
   % differenz delivery_queue_limit und aus der DeliveryQueue rauswerfen
   DeliveryQueueList = orddict:to_list(State#state.delivery_queue),
   ResizedDeliveryQueueList = lists:nthtail(length(DeliveryQueueList), DeliveryQueueList),
-  UpdatedDeliveryQueue = orddict:from_list(lists:append(ResizedDeliveryQueueList, MessageSequence)),
+  UpdatedDeliveryQueue = orddict:from_list(lists:append(ResizedDeliveryQueueList, UpdatedMessageSequence)),
   % aus der HoldBackQueue elemente an DeliveryQueue anfuegen. bis zur naechsten luecke.
   % angefuegte elemente aus der HoldBackQueue entfernen
   UpdatedHoldBackQueue = lists:foldl(fun({_, ID}, HoldBackQueue) ->
@@ -131,3 +135,7 @@ update_delivery_queue(State) ->
                          MessageSequence),
   State#state{delivery_queue=UpdatedDeliveryQueue,
               hold_back_queue=UpdatedHoldBackQueue}.
+
+
+tag_message(Message, QueueName) ->
+  io_lib:format("~p Empfangszeit in ~p: ~p~n", [Message, QueueName, timeMilliSecond()]).
