@@ -10,11 +10,11 @@
 
 -record(state, {config,
                 current_message_number=?FIRST_MESSAGE_ID-1,
-                clients=dict:new(),
-                hold_back_queue=orddict:new(),
-                delivery_queue=orddict:new()}).
+                clients=dict:new(),             % ClientPID -> client_info
+                hold_back_queue=orddict:new(),  % MessageID -> Message
+                delivery_queue=orddict:new()}). % MessageID -> Message
 -record(client_info, {timer_ref,
-                      last_message_id}).
+                      last_message_id=?FIRST_MESSAGE_ID}).
 
 start() ->
   {ok, Config} = file:consult("../server.cfg"),
@@ -38,7 +38,10 @@ loop(State) ->
   receive
     {getmessages, PID} ->
       logging("server.log", io_lib:format("Get messages from PID: ~p ~n", [PID])),
-      loop(State);
+      UpdatedState = register_client_activity(PID, State),
+
+      PID ! {next_message_for_client(PID, State), client_has_no_more_messages(PID, State)},
+      loop(UpdatedState);
 
     {dropmessage, {Message, Number}} ->
       UpdatedMessage = tag_message(Message, "Hold-Back-Queue"),
@@ -78,17 +81,53 @@ stop(Lifetime, ServerPID) ->
   exit(ServerPID, shutdown).
 
 %% private functions
-register_client_activity(Client, State) ->
-  {ok, TimerRef} = timer:send_after(client_lifetime(State), {forget_client, Client}),
+register_client_activity(ClientPID, State) ->
+  {ok, TimerRef} = timer:send_after(client_lifetime(State), {forget_client, ClientPID}),
   UpdatedClients =
-    dict:update(Client,
+    dict:update(ClientPID,
                 fun(Old) ->
                     timer:cancel(Old#client_info.timer_ref),
                     Old#client_info{timer_ref=TimerRef}
                 end,
-                #client_info{timer_ref=TimerRef, last_message_id=?FIRST_MESSAGE_ID-1},
+                #client_info{timer_ref=TimerRef, last_message_id = next_message_id(ClientPID, State) + 1},
                 State#state.clients),
   State#state{clients=UpdatedClients}.
+
+next_message_id(ClientPID, State) ->
+  case dict:find(ClientPID, State#state.clients) of
+    % if the ClientPID is not present return the first_message_id of the
+    % DeliveryQueue because there is no reason for the Client to start at 0
+    % since the DeliveryQueue has moved past 0
+    error -> first_message_id(State#state.delivery_queue);
+    _ ->
+      {ok, Client} = dict:find(ClientPID, State#state.clients),
+      Client#client_info.last_message_id + 1
+  end.
+
+next_message_for_client(ClientPID, State) ->
+  % this function needs to handle two cases:
+  %   - the last_message_id + 1 of the client is no longer present in the
+  %     DeliveryQueue. That means we have to move on to the next available
+  %     message.
+  %   - the last_message_id + 1 is present
+  {ok, Client} = dict:find(ClientPID, State#state.clients),
+  CurrentClientMessageID = Client#client_info.last_message_id,
+  DeliveryQueue = State#state.delivery_queue,
+  case CurrentClientMessageID < first_message_id(DeliveryQueue) of
+    true -> MessageID = first_message_id(DeliveryQueue);
+    _ -> MessageID = CurrentClientMessageID
+  end,
+  {ok, Message} = orddict:find(MessageID, DeliveryQueue),
+  Message.
+
+client_has_no_more_messages(ClientPID, State) ->
+  {ok, Client} = dict:find(ClientPID, State#state.clients),
+  CurrentClientMessageID = Client#client_info.last_message_id,
+  DeliveryQueue = State#state.delivery_queue,
+  not lists:any(CurrentClientMessageID + 1, lists:seq(first_message_id(DeliveryQueue),
+                                                      last_message_id(DeliveryQueue))).
+
+
 
 should_update_delivery_queue(HoldBackQueue, DeliveryQueueLimit) ->
   logging("server.log", io_lib:format("DeliveryQueueLimit: ~p ~n", [DeliveryQueueLimit])),
