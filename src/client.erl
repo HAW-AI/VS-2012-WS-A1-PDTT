@@ -7,7 +7,7 @@ start() ->
   {ok, Config} = file:consult("../client.cfg"),
   {servername, Servername} = lists:keyfind(servername, 1, Config),
   ClientPID = spawn(fun() -> editor(Servername, 5, Config) end),
-  logging("client.log", io_lib:format("Client Startzeit: ~p mit PID ~p ~n",
+  log(io_lib:format("Client Startzeit: ~p mit PID ~p",
                                       [timeMilliSecond(), ClientPID])),
   {lifetime, Lifetime} = lists:keyfind(lifetime, 1, Config),
   timer:apply_after(timer:seconds(Lifetime), ?MODULE, stop, [Lifetime, ClientPID]),
@@ -24,7 +24,7 @@ editor(ServerPID, NumberOfMessagesLeft, Config) ->
                               [2, 6, Hostname, self(), MsgID, timeMilliSecond()]),
 
       ServerPID ! {dropmessage, {Message, MsgID}},
-      logging("client.log", io_lib:format("Sent message ~s to ~p ~n", [Message, ServerPID])),
+      log(io_lib:format("Sent message ~s to ~p", [Message, ServerPID])),
       case NumberOfMessagesLeft - 1 of
         0 -> reader(ServerPID, Config);
         _ ->
@@ -34,7 +34,7 @@ editor(ServerPID, NumberOfMessagesLeft, Config) ->
       end;
 
     Unknown ->
-      logging("client.log", io_lib:format("Got unknown Message ~p ~n", [Unknown])),
+      log(io_lib:format("Got unknown Message ~p", [Unknown])),
       editor(ServerPID, NumberOfMessagesLeft, Config)
   end.
 
@@ -43,20 +43,23 @@ reader(ServerPID, Config) ->
   ServerPID ! {getmessages, self()},
   receive
     {Message, GotAllMessages} ->
-      logging("client.log", io_lib:format("Got Message ~p. messages left: ~p. ~n", [Message, GotAllMessages])),
+      log(io_lib:format("Got Message ~s. messages left: ~p.", [Message, GotAllMessages])),
       case GotAllMessages of
         false -> reader(ServerPID, Config);
         _ -> editor(ServerPID, 5, Config)
       end;
 
     Unknown ->
-      logging("client.log", io_lib:format("Got unknown Message ~p ~n", [Unknown])),
+      log(io_lib:format("Got unknown Message ~p", [Unknown])),
       reader(ServerPID, Config)
   end.
 
 stop(Lifetime, ClientPID) ->
-  logging("client.log", io_lib:format("Client Lifetime timeout after: ~p seconds ~n", [Lifetime])),
+  log(io_lib:format("Client Lifetime timeout after: ~B seconds", [Lifetime])),
   exit(ClientPID, shutdown).
+
+log(Msg) ->
+  logging("client.log", io_lib:format("~s~n", [Msg])).
 
 calculate_new_interval(CurrentInterval) ->
   Faktor = case random:uniform(2) of

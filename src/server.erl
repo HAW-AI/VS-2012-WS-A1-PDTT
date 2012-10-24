@@ -51,7 +51,7 @@ loop(State) ->
 
     {dropmessage, {Message, Number}} ->
       UpdatedMessage = tag_message(Message, "Hold-Back-Queue"),
-      log(io_lib:format("Drop message {~s , ~B}", [UpdatedMessage, Number])),
+      log(io_lib:format("Drop message ~B: ~s", [Number, UpdatedMessage])),
       UpdatedHoldBackQueue = orddict:append(Number, UpdatedMessage, State#state.hold_back_queue),
       DeliveryQueue = State#state.delivery_queue,
       ExpectedID = case last_message_id(DeliveryQueue) of
@@ -71,7 +71,6 @@ loop(State) ->
       log(io_lib:format("Message ID ~B given to ~p", [MsgID, PID])),
       PID ! MsgID,
       UpdatedState = register_client_activity(PID, State),
-      %log(io_lib:format("Updated State: ~p", [UpdatedState])),
       loop(UpdatedState#state{current_message_number=MsgID});
 
     {forget_client, PID} ->
@@ -168,7 +167,6 @@ increment_last_message_id(PID, State) ->
   State#state{clients=UpdatedClients}.
 
 should_update_delivery_queue(HoldBackQueue, DeliveryQueueLimit, ExpectedID) ->
-  log(io_lib:format("DeliveryQueueLimit: ~B", [DeliveryQueueLimit])),
   orddict:is_key(ExpectedID, HoldBackQueue) orelse orddict:size(HoldBackQueue) > DeliveryQueueLimit div 2.
 
 delivery_queue_limit(State) ->
@@ -234,8 +232,7 @@ tag_messages(IDs, QueueName, Queue) ->
 
 
 tag_message(Message, QueueName) ->
-  io:format("~n~n~n->>>> MESSAGE: ~s~n~n~n", [Message]),
-  io_lib:format("~s; Empfangszeit in ~s: ~s~n", [Message, QueueName, timeMilliSecond()]).
+  io_lib:format("~s Empfangszeit in ~s: ~s", [Message, QueueName, timeMilliSecond()]).
 
 diff_keys(Dict1, Dict2) ->
   sets:to_list(sets:subtract(sets:from_list(orddict:fetch_keys(Dict1)), sets:from_list(orddict:fetch_keys(Dict2)))).
