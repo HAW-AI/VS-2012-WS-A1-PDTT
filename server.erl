@@ -40,9 +40,32 @@ loop(State) ->
       log(io_lib:format("Get messages from PID: ~p", [PID])),
       UpdatedState = register_client_activity(PID, State),
 
-      case has_client_messages_left(PID, State) of
-        true -> Msg = next_message_for_client(PID, State),
-                UpdatedUpdatedState = increment_last_message_id(PID, UpdatedState),
+      HBQ = State#state.hold_back_queue,
+      DLQ = State#state.delivery_queue,
+
+      %io:format("the dlq:~n", []),
+      %orddict:fold(fun(Num, Msg, _) -> io:format("~B => ~s~n", [Num, Msg]) end, void, DLQ),
+      %io:format("~n", []),
+
+      %io:format("the hbq:~n", []),
+      %orddict:fold(fun(Num, Msg, _) -> io:format("~B => ~s~n", [Num, Msg]) end, void, HBQ),
+      %io:format("~n", []),
+
+      UpdatedDLQ = case has_client_messages_left(PID, State) of
+        false ->
+          case should_fill_gap(HBQ, DLQ, delivery_queue_limit(State)) of
+            true -> fill_gap(HBQ, DLQ);
+            _    -> DLQ
+          end;
+        _    ->
+          DLQ
+      end,
+
+      StateWithoutGap = UpdatedState#state{delivery_queue=UpdatedDLQ},
+
+      case has_client_messages_left(PID, StateWithoutGap) of
+        true -> Msg = next_message_for_client(PID, StateWithoutGap),
+                UpdatedUpdatedState = increment_last_message_id(PID, StateWithoutGap),
                 PID ! {Msg, not has_client_messages_left(PID, UpdatedUpdatedState)},
                 loop(UpdatedUpdatedState);
 
@@ -239,7 +262,7 @@ should_fill_gap(HBQ, DLQ, DLQLimit) ->
         ID   -> ID+1
       end,
 
-      not orddict:is_key(FirstHBQID)
+      not orddict:is_key(FirstHBQID, HBQ)
   end.
 
 fill_gap(HBQ, DLQ) ->
