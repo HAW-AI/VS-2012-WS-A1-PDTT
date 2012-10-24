@@ -210,9 +210,9 @@ update_delivery_queue(HBQ, DLQ) ->
   %UpdatedMsgSeq = lists:map(fun({ID, Message}) -> {ID, tag_message(Message, "Delivery-Queue")} end, MsgSeq),
 
   % differenz delivery_queue_limit und aus der DeliveryQueue rauswerfen
+
   DLQList = orddict:to_list(DLQ),
-  ResizedDLQList = lists:nthtail(length(DLQList), DLQList),
-  UpdatedDLQ = orddict:from_list(lists:append(ResizedDLQList, MsgSeq)),
+  UpdatedDLQ = orddict:from_list(lists:append(DLQList, MsgSeq)),
 
   % aus der HoldBackQueue elemente an DeliveryQueue anfuegen. bis zur naechsten luecke.
   % angefuegte elemente aus der HoldBackQueue entfernen
@@ -249,6 +249,7 @@ extract_message_sequence_test_() ->
 update_delivery_queue_test_() ->
   HBQ = orddict:from_list([{2, "foo"}, {3, "bar"}, {1, "baz"}, {7, "nada"}]),
   DLQ = orddict:new(),
+  DLQ2 = orddict:from_list([{0, "lala"}]),
 
   [ ?_assertEqual({orddict:new(), orddict:new()},
                   update_delivery_queue(orddict:new(), orddict:new()))
@@ -256,6 +257,8 @@ update_delivery_queue_test_() ->
                   update_delivery_queue(HBQ, DLQ))
   , ?_assertEqual({orddict:erase(1, HBQ), DLQ},
                   update_delivery_queue(orddict:erase(1, HBQ), DLQ))
+  , ?_assertEqual({orddict:from_list([{7, "nada"}]), orddict:from_list([{2, "foo"}, {3, "bar"}, {1, "baz"}, {0, "lala"}])},
+                  update_delivery_queue(HBQ, DLQ2))
   ].
 
 should_update_delivery_queue_test_() ->
