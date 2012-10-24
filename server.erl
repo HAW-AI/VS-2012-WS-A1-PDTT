@@ -263,7 +263,6 @@ update_delivery_queue_test_() ->
 
 should_update_delivery_queue_test_() ->
   HBQ = orddict:from_list([{2, "foo"}, {3, "bar"}, {1, "baz"}, {7, "nada"}]),
-  DLQ = orddict:new(),
 
   [ ?_assertNot(should_update_delivery_queue(HBQ, 31, 4))
   , ?_assert(should_update_delivery_queue(HBQ, 31, 1))
