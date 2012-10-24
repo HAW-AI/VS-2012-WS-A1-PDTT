@@ -43,18 +43,23 @@ loop(State) ->
       case has_client_messages_left(PID, State) of
         true -> Msg = next_message_for_client(PID, State),
                 UpdatedUpdatedState = increment_last_message_id(PID, UpdatedState),
-                PID ! {Msg, not has_client_messages_left(PID, UpdatedUpdatedState)};
+                PID ! {Msg, not has_client_messages_left(PID, UpdatedUpdatedState)},
+                loop(UpdatedUpdatedState);
 
-        _    -> noop
-      end,
-
-      loop(UpdatedState);
+        _    -> loop(UpdatedState)
+      end;
 
     {dropmessage, {Message, Number}} ->
       UpdatedMessage = tag_message(Message, "Hold-Back-Queue"),
       logging("server.log", io_lib:format("Drop message {~p , ~p}~n", [UpdatedMessage, Number])),
       UpdatedHoldBackQueue = orddict:append(Number, UpdatedMessage, State#state.hold_back_queue),
-      case should_update_delivery_queue(UpdatedHoldBackQueue, delivery_queue_limit(State)) of
+      DeliveryQueue = State#state.delivery_queue,
+      ExpectedID = case last_message_id(DeliveryQueue) of
+        void -> ?FIRST_MESSAGE_ID;
+        ID -> ID + 1
+      end,
+
+      case should_update_delivery_queue(UpdatedHoldBackQueue, delivery_queue_limit(State), ExpectedID) of
         true -> {UpdatedUpdatedHBQ, UpdatedDLQ} = update_delivery_queue(UpdatedHoldBackQueue, State#state.delivery_queue),
                 TaggedDLQ = tag_messages(diff_keys(UpdatedHoldBackQueue, UpdatedUpdatedHBQ), "Delivery-Queue", UpdatedDLQ),
                 loop(State#state{hold_back_queue=UpdatedUpdatedHBQ, delivery_queue=TaggedDLQ});
@@ -158,9 +163,9 @@ increment_last_message_id(PID, State) ->
 
   State#state{clients=UpdatedClients}.
 
-should_update_delivery_queue(HoldBackQueue, DeliveryQueueLimit) ->
+should_update_delivery_queue(HoldBackQueue, DeliveryQueueLimit, ExpectedID) ->
   logging("server.log", io_lib:format("DeliveryQueueLimit: ~p ~n", [DeliveryQueueLimit])),
-  orddict:size(HoldBackQueue) >= DeliveryQueueLimit div 2.
+  orddict:is_key(ExpectedID, HoldBackQueue) orelse orddict:size(HoldBackQueue) > DeliveryQueueLimit div 2.
 
 delivery_queue_limit(State) ->
   {dlqlimit, Limit} = lists:keyfind(dlqlimit, 1, State#state.config),
@@ -249,6 +254,18 @@ update_delivery_queue_test_() ->
                   update_delivery_queue(HBQ, DLQ))
   , ?_assertEqual({orddict:erase(1, HBQ), DLQ},
                   update_delivery_queue(orddict:erase(1, HBQ), DLQ))
+  ].
+
+should_update_delivery_queue_test_() ->
+  HBQ = orddict:from_list([{2, "foo"}, {3, "bar"}, {1, "baz"}, {7, "nada"}]),
+  DLQ = orddict:new(),
+
+  [ ?_assertNot(should_update_delivery_queue(HBQ, 31, 4))
+  , ?_assert(should_update_delivery_queue(HBQ, 31, 1))
+  , ?_assert(should_update_delivery_queue(HBQ, 31, 2))
+  , ?_assert(should_update_delivery_queue(HBQ, 4, 4))
+  , ?_assert(should_update_delivery_queue(HBQ, 7, 4))
+  , ?_assertNot(should_update_delivery_queue(HBQ, 8, 4))
   ].
 
 diff_keys_test_() ->

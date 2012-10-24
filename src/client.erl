@@ -38,10 +38,10 @@ editor(ServerPID, NumberOfMessagesLeft, Config) ->
 reader(ServerPID, Config) ->
   ServerPID ! {getmessages, self()},
   receive
-    {Message, HasMessagesLeft} ->
-      logging("client.log", io_lib:format("Got Message ~p. messages left: ~p. ~n", [Message, HasMessagesLeft])),
-      case HasMessagesLeft of
-        true -> reader(ServerPID, Config);
+    {Message, GotAllMessages} ->
+      logging("client.log", io_lib:format("Got Message ~p. messages left: ~p. ~n", [Message, GotAllMessages])),
+      case GotAllMessages of
+        false -> reader(ServerPID, Config);
         _ -> editor(ServerPID, 5, Config)
       end;
 
