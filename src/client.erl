@@ -29,8 +29,8 @@ editor(ServerPID, NumberOfMessagesLeft, Config) ->
         0 -> reader(ServerPID, Config);
         _ ->
           {sendeintervall, Interval} = lists:keyfind(sendeintervall, 1, Config),
-          timer:sleep(Interval * 1000),
-          editor(ServerPID, NumberOfMessagesLeft - 1, set_new_interval_in_config(Config, Interval))
+          timer:sleep(timer:seconds(Interval)),
+          editor(ServerPID, NumberOfMessagesLeft - 1, Config)
       end;
 
     Unknown ->
@@ -46,7 +46,7 @@ reader(ServerPID, Config) ->
       log(io_lib:format("Got Message ~s. messages left: ~p.", [Message, GotAllMessages])),
       case GotAllMessages of
         false -> reader(ServerPID, Config);
-        _ -> editor(ServerPID, 5, Config)
+        _ -> editor(ServerPID, 5, set_new_interval_in_config(Config))
       end;
 
     Unknown ->
@@ -73,5 +73,6 @@ calculate_new_interval(CurrentInterval) ->
     _ -> round(NewInterval)
   end.
 
-set_new_interval_in_config(Config, Interval) ->
+set_new_interval_in_config(Config) ->
+  {sendeintervall, Interval} = lists:keyfind(sendeintervall, 1, Config),
   lists:keyreplace(sendeintervall, 1, Config, {sendeintervall, calculate_new_interval(Interval)}).
