@@ -63,7 +63,7 @@ calculate_new_interval(CurrentInterval) ->
 
   case NewInterval < 1 of
     true -> 1;
-    _ -> NewInterval
+    _ -> round(NewInterval)
   end.
 
 set_new_interval_in_config(Config, Interval) ->
