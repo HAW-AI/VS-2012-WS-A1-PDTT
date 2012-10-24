@@ -59,8 +59,14 @@ loop(State) ->
         ID -> ID + 1
       end,
 
+      DLQWithoutGap =
+        case should_fill_gap(UpdatedHoldBackQueue, DeliveryQueue, delivery_queue_limit(State)) of
+          true -> fill_gap(UpdatedHoldBackQueue, DeliveryQueue);
+          _    -> DeliveryQueue
+        end,
+
       case should_update_delivery_queue(UpdatedHoldBackQueue, delivery_queue_limit(State), ExpectedID) of
-        true -> {UpdatedUpdatedHBQ, UpdatedDLQ} = update_delivery_queue(UpdatedHoldBackQueue, State#state.delivery_queue),
+        true -> {UpdatedUpdatedHBQ, UpdatedDLQ} = update_delivery_queue(UpdatedHoldBackQueue, DLQWithoutGap),
                 TaggedDLQ = tag_messages(diff_keys(UpdatedHoldBackQueue, UpdatedUpdatedHBQ), "Delivery-Queue", UpdatedDLQ),
                 loop(State#state{hold_back_queue=UpdatedUpdatedHBQ, delivery_queue=TaggedDLQ});
         _    -> loop(State#state{hold_back_queue=UpdatedHoldBackQueue})
@@ -181,16 +187,15 @@ first_message_id(DeliveryQueue) ->
   orddict:fold(fun(Number, _, SmallestID) -> min(Number, SmallestID) end, void, DeliveryQueue).
 
 last_message_id(DeliveryQueue) ->
-  orddict:fold(fun(Number, _, SmallestID) ->
-                 if
-                   SmallestID == void -> Number;
-                   true               -> max(Number, SmallestID)
-                 end
-               end, void, DeliveryQueue).
+  orddict:fold(fun(Num, _, MaxID) ->
+      case MaxID of
+        void -> Num;
+        _    -> max(MaxID, Num)
+      end
+    end, void, DeliveryQueue).
 
 extract_message_sequence(HoldBackQueue, FirstID) ->
   {_, Seq} = orddict:fold(fun(ID, Message, {LastID, Seq}) ->
-                            io:format("ID: ~p~n", [ID]),
                             if
                               ID == LastID+1 -> {ID, [{ID, Message} | Seq]};
                               true           -> {LastID, Seq}
@@ -223,6 +228,38 @@ update_delivery_queue(HBQ, DLQ) ->
                            MsgSeq),
 
   {UpdatedHBQ, UpdatedDLQ}.
+
+
+should_fill_gap(HBQ, DLQ, DLQLimit) ->
+  case orddict:size(HBQ) > DLQLimit div 2 of
+    false -> false;
+    _     ->
+      FirstHBQID = case last_message_id(DLQ) of
+        void -> ?FIRST_MESSAGE_ID;
+        ID   -> ID+1
+      end,
+
+      not orddict:is_key(FirstHBQID)
+  end.
+
+fill_gap(HBQ, DLQ) ->
+  FirstGapID = case last_message_id(DLQ) of
+    void -> ?FIRST_MESSAGE_ID;
+    FID  -> FID+1
+  end,
+
+  LastGapID = case first_message_id(HBQ) of
+    void -> ?FIRST_MESSAGE_ID;
+    LID  -> LID-1
+  end,
+
+  case FirstGapID == LastGapID of
+    true -> DLQ;
+    _    -> Msg = io_lib:format("***Fehlernachricht fuer Nachrichtennummern ~B bis ~B um ~s",
+                                [FirstGapID, LastGapID, timeMilliSecond()]),
+            orddict:append(LastGapID, Msg, DLQ)
+  end.
+
 
 % add timestamp
 tag_messages(IDs, QueueName, Queue) ->
