@@ -24,7 +24,7 @@ start() ->
   {servername, ServerName} = lists:keyfind(servername, 1, State#state.config),
   register(ServerName, ServerPID),
 
-  logging("server.log", io_lib:format("Server Startzeit: ~p mit PID ~p ~n", [timeMilliSecond(), ServerPID])),
+  log(io_lib:format("Server Startzeit: ~s mit PID ~p", [timeMilliSecond(), ServerPID])),
 
   % exit server after lifetime which is specified in the config
   {lifetime, Lifetime} = lists:keyfind(lifetime, 1, Config),
@@ -37,7 +37,7 @@ loop(State) ->
 
   receive
     {getmessages, PID} ->
-      logging("server.log", io_lib:format("Get messages from PID: ~p ~n", [PID])),
+      log(io_lib:format("Get messages from PID: ~p", [PID])),
       UpdatedState = register_client_activity(PID, State),
 
       case has_client_messages_left(PID, State) of
@@ -51,7 +51,7 @@ loop(State) ->
 
     {dropmessage, {Message, Number}} ->
       UpdatedMessage = tag_message(Message, "Hold-Back-Queue"),
-      logging("server.log", io_lib:format("Drop message {~p , ~p}~n", [UpdatedMessage, Number])),
+      log(io_lib:format("Drop message {~s , ~B}", [UpdatedMessage, Number])),
       UpdatedHoldBackQueue = orddict:append(Number, UpdatedMessage, State#state.hold_back_queue),
       DeliveryQueue = State#state.delivery_queue,
       ExpectedID = case last_message_id(DeliveryQueue) of
@@ -68,31 +68,35 @@ loop(State) ->
 
     {getmsgeid, PID} ->
       MsgID = State#state.current_message_number+1,
-      logging("server.log", io_lib:format("Message ID ~p give to ~p ~n", [MsgID, PID])),
+      log(io_lib:format("Message ID ~B given to ~p", [MsgID, PID])),
       PID ! MsgID,
       UpdatedState = register_client_activity(PID, State),
-      logging("server.log", io_lib:format("Updated State: ~p ~n", [UpdatedState])),
+      %log(io_lib:format("Updated State: ~p", [UpdatedState])),
       loop(UpdatedState#state{current_message_number=MsgID});
 
     {forget_client, PID} ->
-      logging("server.log", io_lib:format("Client ~p wird vergessen! *************~n", [PID])),
+      log(io_lib:format("Client ~p wird vergessen! *************", [PID])),
       loop(State#state{clients=dict:erase(PID, State#state.clients)});
 
     Unknown ->
-      logging("server.log", io_lib:format("Got unknown Message ~p ~n", [Unknown])),
+      log(io_lib:format("Got unknown Message ~p", [Unknown])),
       loop(State)
 
   after timer:seconds(Difftime) ->
-    logging("server.log", io_lib:format("Difftime timeout. Fuer ~p Sekunden keine Nachrichten erhalten. ~n",
+    log(io_lib:format("Difftime timeout. Fuer ~B Sekunden keine Nachrichten erhalten.",
                                         [Difftime])),
     exit(shutdown)
   end.
 
 stop(Lifetime, ServerPID) ->
-  logging("server.log", io_lib:format("Server Lifetime timeout after: ~p seconds ~n", [Lifetime])),
+  log(io_lib:format("Server Lifetime timeout after: ~B seconds", [Lifetime])),
   exit(ServerPID, shutdown).
 
 %% private functions
+log(Msg) ->
+  logging("server.log", io_lib:format("~s~n", [Msg])).
+
+
 register_client_activity(ClientPID, State) ->
   {ok, TimerRef} = timer:send_after(timer:seconds(client_lifetime(State)), {forget_client, ClientPID}),
   UpdatedClients =
@@ -164,7 +168,7 @@ increment_last_message_id(PID, State) ->
   State#state{clients=UpdatedClients}.
 
 should_update_delivery_queue(HoldBackQueue, DeliveryQueueLimit, ExpectedID) ->
-  logging("server.log", io_lib:format("DeliveryQueueLimit: ~p ~n", [DeliveryQueueLimit])),
+  log(io_lib:format("DeliveryQueueLimit: ~B", [DeliveryQueueLimit])),
   orddict:is_key(ExpectedID, HoldBackQueue) orelse orddict:size(HoldBackQueue) > DeliveryQueueLimit div 2.
 
 delivery_queue_limit(State) ->
@@ -230,7 +234,8 @@ tag_messages(IDs, QueueName, Queue) ->
 
 
 tag_message(Message, QueueName) ->
-  io_lib:format("~p Empfangszeit in ~p: ~p~n", [Message, QueueName, timeMilliSecond()]).
+  io:format("~n~n~n->>>> MESSAGE: ~s~n~n~n", [Message]),
+  io_lib:format("~s; Empfangszeit in ~s: ~s~n", [Message, QueueName, timeMilliSecond()]).
 
 diff_keys(Dict1, Dict2) ->
   sets:to_list(sets:subtract(sets:from_list(orddict:fetch_keys(Dict1)), sets:from_list(orddict:fetch_keys(Dict2)))).
