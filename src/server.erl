@@ -89,7 +89,7 @@ stop(Lifetime, ServerPID) ->
 
 %% private functions
 register_client_activity(ClientPID, State) ->
-  {ok, TimerRef} = timer:send_after(client_lifetime(State), {forget_client, ClientPID}),
+  {ok, TimerRef} = timer:send_after(timer:seconds(client_lifetime(State)), {forget_client, ClientPID}),
   UpdatedClients =
     dict:update(ClientPID,
                 fun(Old) ->
