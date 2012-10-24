@@ -2,6 +2,8 @@
 -import(werkzeug, [logging/2,timeMilliSecond/0]).
 
 -define(INITIAL_NUMBER_OF_MESSAGES_LEFT_TO_SEND, 5).
+-define(PRAKTIKUMS_GRUPPE, 2).
+-define(TEAM_NUMMER, 6).
 
 -compile([export_all]).
 
@@ -23,7 +25,7 @@ editor(ServerPID, NumberOfMessagesLeft, Config) ->
 
       {ok, Hostname} = inet:gethostname(),
       Message = io_lib:format("Gruppe: ~B, Team: ~B; ~s-~p: ~Bte_Nachricht. Sendezeit: ~s",
-                              [2, 6, Hostname, self(), MsgID, timeMilliSecond()]),
+                              [?PRAKTIKUMS_GRUPPE, ?TEAM_NUMMER, Hostname, self(), MsgID, timeMilliSecond()]),
 
       ServerPID ! {dropmessage, {Message, MsgID}},
       log(io_lib:format("Sent message ~s to ~p", [Message, ServerPID])),
