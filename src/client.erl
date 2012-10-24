@@ -30,7 +30,7 @@ editor(ServerPID, NumberOfMessagesLeft, Config) ->
         _ ->
           {sendeintervall, Interval} = lists:keyfind(sendeintervall, 1, Config),
           timer:sleep(Interval * 1000),
-          editor(ServerPID, NumberOfMessagesLeft - 1, Config)
+          editor(ServerPID, NumberOfMessagesLeft - 1, set_new_interval_in_config(Config, Interval))
       end;
 
     Unknown ->
@@ -57,3 +57,18 @@ reader(ServerPID, Config) ->
 stop(Lifetime, ClientPID) ->
   logging("client.log", io_lib:format("Client Lifetime timeout after: ~p seconds ~n", [Lifetime])),
   exit(ClientPID, shutdown).
+
+calculate_new_interval(CurrentInterval) ->
+  Faktor = case random:uniform(2) of
+    1 -> -0.5;
+    _ -> 0.5
+  end,
+  NewInterval = CurrentInterval + (CurrentInterval * Faktor),
+
+  case NewInterval < 1 of
+    true -> 1;
+    _ -> NewInterval
+  end.
+
+set_new_interval_in_config(Config, Interval) ->
+  lists:keyreplace(sendeintervall, 1, Config, {sendeintervall, calculate_new_interval(Interval)}).
