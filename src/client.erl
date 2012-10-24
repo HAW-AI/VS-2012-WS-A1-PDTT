@@ -18,9 +18,13 @@ editor(ServerPID, NumberOfMessagesLeft, Config) ->
 
   receive
     MsgID when is_integer(MsgID) ; MsgID >= 0 ->
-      Message = {self(), inet:gethostname(), 2, 6, timeMilliSecond()},
+
+      {ok, Hostname} = inet:gethostname(),
+      Message = io_lib:format("Gruppe: ~B, Team: ~B; ~s-~p: ~Bte_Nachricht. Sendezeit: ~s",
+                              [2, 6, Hostname, self(), MsgID, timeMilliSecond()]),
+
       ServerPID ! {dropmessage, {Message, MsgID}},
-      logging("client.log", io_lib:format("Sent message ~p to ~p ~n", [Message, ServerPID])),
+      logging("client.log", io_lib:format("Sent message ~s to ~p ~n", [Message, ServerPID])),
       case NumberOfMessagesLeft - 1 of
         0 -> reader(ServerPID, Config);
         _ ->
