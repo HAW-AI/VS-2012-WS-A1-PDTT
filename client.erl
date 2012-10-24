@@ -4,7 +4,7 @@
 -compile([export_all]).
 
 start() ->
-  {ok, Config} = file:consult("../client.cfg"),
+  {ok, Config} = file:consult("client.cfg"),
   {servername, Servername} = lists:keyfind(servername, 1, Config),
   ClientPID = spawn(fun() -> editor(Servername, 5, Config) end),
   log(io_lib:format("Client Startzeit: ~p mit PID ~p",

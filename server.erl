@@ -17,7 +17,7 @@
                       last_message_id=?FIRST_MESSAGE_ID}).
 
 start() ->
-  {ok, Config} = file:consult("../server.cfg"),
+  {ok, Config} = file:consult("server.cfg"),
   State = #state{config=Config},
 
   ServerPID = spawn(fun() -> loop(State) end),
