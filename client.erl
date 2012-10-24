@@ -1,6 +1,8 @@
 -module(client).
 -import(werkzeug, [logging/2,timeMilliSecond/0]).
 
+-define(INITIAL_NUMBER_OF_MESSAGES_LEFT_TO_SEND, 5).
+
 -compile([export_all]).
 
 start() ->
@@ -46,7 +48,9 @@ reader(ServerPID, Config) ->
       log(io_lib:format("Got Message ~s. messages left: ~p.", [Message, GotAllMessages])),
       case GotAllMessages of
         false -> reader(ServerPID, Config);
-        _ -> editor(ServerPID, 5, set_new_interval_in_config(Config))
+        _ -> editor(ServerPID,
+                    ?INITIAL_NUMBER_OF_MESSAGES_LEFT_TO_SEND,
+                    set_new_interval_in_config(Config))
       end;
 
     Unknown ->
