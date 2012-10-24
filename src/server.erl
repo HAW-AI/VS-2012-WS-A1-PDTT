@@ -89,7 +89,7 @@ register_client_activity(ClientPID, State) ->
                     timer:cancel(Old#client_info.timer_ref),
                     Old#client_info{timer_ref=TimerRef}
                 end,
-                #client_info{timer_ref=TimerRef, last_message_id = next_message_id(ClientPID, State) + 1},
+                #client_info{timer_ref=TimerRef},
                 State#state.clients),
   State#state{clients=UpdatedClients}.
 
