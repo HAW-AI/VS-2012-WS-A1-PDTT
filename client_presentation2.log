@@ -1,0 +1,103 @@
+Servername wk has Pid: {wk,'server@lab22.cpt.haw-hamburg.de'}
+Client Startzeit: "25.10 11:27:23,406|" mit PID <0.4656.0>
+Client Startzeit: "25.10 11:27:23,408|" mit PID <0.4658.0>
+Sent message Gruppe: 2, Team: 6; lab27-<0.4658.0>: 202te_Nachricht. Sendezeit: 25.10 11:27:23,434| to {wk,
+                                                                                                       'server@lab22.cpt.haw-hamburg.de'}
+Client Startzeit: "25.10 11:27:23,409|" mit PID <0.4661.0>
+Client Startzeit: "25.10 11:27:23,435|" mit PID <0.4666.0>
+Sent message Gruppe: 2, Team: 6; lab27-<0.4656.0>: 201te_Nachricht. Sendezeit: 25.10 11:27:23,432| to {wk,
+                                                                                                       'server@lab22.cpt.haw-hamburg.de'}
+Client Startzeit: "25.10 11:27:23,447|" mit PID <0.4668.0>
+Sent message Gruppe: 2, Team: 6; lab27-<0.4661.0>: 203te_Nachricht. Sendezeit: 25.10 11:27:23,448| to {wk,
+                                                                                                       'server@lab22.cpt.haw-hamburg.de'}
+Client Startzeit: "25.10 11:27:23,451|" mit PID <0.4673.0>
+Client Startzeit: "25.10 11:27:23,450|" mit PID <0.4671.0>
+Client Startzeit: "25.10 11:27:23,453|" mit PID <0.4677.0>
+Client Startzeit: "25.10 11:27:23,452|" mit PID <0.4675.0>
+Client Startzeit: "25.10 11:27:23,453|" mit PID <0.4679.0>
+Sent message Gruppe: 2, Team: 6; lab27-<0.4668.0>: 205te_Nachricht. Sendezeit: 25.10 11:27:23,492| to {wk,
+                                                                                                       'server@lab22.cpt.haw-hamburg.de'}
+Sent message Gruppe: 2, Team: 6; lab27-<0.4666.0>: 204te_Nachricht. Sendezeit: 25.10 11:27:23,455| to {wk,
+                                                                                                       'server@lab22.cpt.haw-hamburg.de'}
+Sent message Gruppe: 2, Team: 6; lab27-<0.4673.0>: 207te_Nachricht. Sendezeit: 25.10 11:27:23,496| to {wk,
+                                                                                                       'server@lab22.cpt.haw-hamburg.de'}
+Sent message Gruppe: 2, Team: 6; lab27-<0.4671.0>: 206te_Nachricht. Sendezeit: 25.10 11:27:23,494| to {wk,
+                                                                                                       'server@lab22.cpt.haw-hamburg.de'}
+Sent message Gruppe: 2, Team: 6; lab27-<0.4675.0>: 208te_Nachricht. Sendezeit: 25.10 11:27:23,498| to {wk,
+                                                                                                       'server@lab22.cpt.haw-hamburg.de'}
+Sent message Gruppe: 2, Team: 6; lab27-<0.4677.0>: 209te_Nachricht. Sendezeit: 25.10 11:27:23,500| to {wk,
+                                                                                                       'server@lab22.cpt.haw-hamburg.de'}
+Sent message Gruppe: 2, Team: 6; lab27-<0.4679.0>: 210te_Nachricht. Sendezeit: 25.10 11:27:23,502| to {wk,
+                                                                                                       'server@lab22.cpt.haw-hamburg.de'}
+Servername wk has Pid: {wk,'server@lab22.cpt.haw-hamburg.de'}
+Client Startzeit: "25.10 11:27:25,241|" mit PID <0.5370.0>
+Client Startzeit: "25.10 11:27:25,246|" mit PID <0.5373.0>
+Client Startzeit: "25.10 11:27:25,246|" mit PID <0.5375.0>
+Client Startzeit: "25.10 11:27:25,247|" mit PID <0.5377.0>
+Client Startzeit: "25.10 11:27:25,248|" mit PID <0.5379.0>
+Client Startzeit: "25.10 11:27:25,249|" mit PID <0.5381.0>
+Client Startzeit: "25.10 11:27:25,249|" mit PID <0.5383.0>
+Client Startzeit: "25.10 11:27:25,250|" mit PID <0.5385.0>
+Client Startzeit: "25.10 11:27:25,251|" mit PID <0.5387.0>
+Client Startzeit: "25.10 11:27:25,251|" mit PID <0.5389.0>
+Sent message Gruppe: 2, Team: 6; lab27-<0.5370.0>: 261te_Nachricht. Sendezeit: 25.10 11:27:25,258| to {wk,
+                                                                                                       'server@lab22.cpt.haw-hamburg.de'}
+Sent message Gruppe: 2, Team: 6; lab27-<0.5373.0>: 262te_Nachricht. Sendezeit: 25.10 11:27:25,261| to {wk,
+                                                                                                       'server@lab22.cpt.haw-hamburg.de'}
+Sent message Gruppe: 2, Team: 6; lab27-<0.5375.0>: 263te_Nachricht. Sendezeit: 25.10 11:27:25,363| to {wk,
+                                                                                                       'server@lab22.cpt.haw-hamburg.de'}
+Sent message Gruppe: 2, Team: 6; lab27-<0.5377.0>: 264te_Nachricht. Sendezeit: 25.10 11:27:25,365| to {wk,
+                                                                                                       'server@lab22.cpt.haw-hamburg.de'}
+Sent message Gruppe: 2, Team: 6; lab27-<0.5379.0>: 265te_Nachricht. Sendezeit: 25.10 11:27:25,367| to {wk,
+                                                                                                       'server@lab22.cpt.haw-hamburg.de'}
+Sent message Gruppe: 2, Team: 6; lab27-<0.5381.0>: 266te_Nachricht. Sendezeit: 25.10 11:27:25,369| to {wk,
+                                                                                                       'server@lab22.cpt.haw-hamburg.de'}
+Sent message Gruppe: 2, Team: 6; lab27-<0.5383.0>: 267te_Nachricht. Sendezeit: 25.10 11:27:25,371| to {wk,
+                                                                                                       'server@lab22.cpt.haw-hamburg.de'}
+Sent message Gruppe: 2, Team: 6; lab27-<0.5389.0>: 270te_Nachricht. Sendezeit: 25.10 11:27:25,377| to {wk,
+                                                                                                       'server@lab22.cpt.haw-hamburg.de'}
+Sent message Gruppe: 2, Team: 6; lab27-<0.5387.0>: 269te_Nachricht. Sendezeit: 25.10 11:27:25,375| to {wk,
+                                                                                                       'server@lab22.cpt.haw-hamburg.de'}
+Sent message Gruppe: 2, Team: 6; lab27-<0.5385.0>: 268te_Nachricht. Sendezeit: 25.10 11:27:25,373| to {wk,
+                                                                                                       'server@lab22.cpt.haw-hamburg.de'}
+Servername wk has Pid: {wk,'server@lab22.cpt.haw-hamburg.de'}
+Client Startzeit: "25.10 11:27:27,198|" mit PID <0.4660.0>
+Client Startzeit: "25.10 11:27:27,201|" mit PID <0.4663.0>
+Client Startzeit: "25.10 11:27:27,202|" mit PID <0.4665.0>
+Client Startzeit: "25.10 11:27:27,203|" mit PID <0.4667.0>
+Client Startzeit: "25.10 11:27:27,204|" mit PID <0.4669.0>
+Client Startzeit: "25.10 11:27:27,204|" mit PID <0.4671.0>
+Client Startzeit: "25.10 11:27:27,205|" mit PID <0.4673.0>
+Client Startzeit: "25.10 11:27:27,206|" mit PID <0.4675.0>
+Client Startzeit: "25.10 11:27:27,206|" mit PID <0.4677.0>
+Client Startzeit: "25.10 11:27:27,207|" mit PID <0.4679.0>
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
+Client Lifetime timeout after: 88 seconds
