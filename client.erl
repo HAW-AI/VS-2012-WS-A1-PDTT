@@ -18,7 +18,8 @@ start() ->
       ClientPID = spawn(fun() -> editor(ServerPID, ?INITIAL_NUMBER_OF_MESSAGES_LEFT_TO_SEND, Config) end),
       log(io_lib:format("Client Startzeit: ~p mit PID ~p",
                         [timeMilliSecond(), ClientPID])),
-      timer:apply_after(timer:seconds(Lifetime), ?MODULE, stop, [Lifetime, ClientPID])
+      timer:apply_after(timer:seconds(Lifetime), ?MODULE, stop, [Lifetime, ClientPID]),
+      ClientPID
     end, lists:seq(0, NumClients)),
   Clients.
 
