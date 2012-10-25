@@ -10,7 +10,8 @@
 start() ->
   {ok, Config} = file:consult("client.cfg"),
   {servername, Servername} = lists:keyfind(servername, 1, Config),
-  ServerPID = whereis(Servername),
+  ServerPID = global:whereis_name(Servername),
+  log(io_lib:format("Servername ~s has Pid: ~s", [Servername, ServerPID])),
   {lifetime, Lifetime} = lists:keyfind(lifetime, 1, Config),
   NumClients = proplists:get_value(clients, Config),
   Clients = lists:map(fun(_ClientID) ->
