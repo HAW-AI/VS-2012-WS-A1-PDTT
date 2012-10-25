@@ -22,7 +22,7 @@ start() ->
 
   ServerPID = spawn(fun() -> loop(State) end),
   {servername, ServerName} = lists:keyfind(servername, 1, State#state.config),
-  register(ServerName, ServerPID),
+  global:re_register_name(ServerName, ServerPID),
 
   log(io_lib:format("Server Startzeit: ~s mit PID ~p", [timeMilliSecond(), ServerPID])),
 
