@@ -73,8 +73,8 @@ loop(State) ->
       end;
 
     {dropmessage, {Message, Number}} ->
+      log(io_lib:format("Drop message ~B: ~s", [Number, Message])),
       UpdatedMessage = tag_message(Message, "Hold-Back-Queue"),
-      log(io_lib:format("Drop message ~B: ~s", [Number, UpdatedMessage])),
       UpdatedHoldBackQueue = orddict:append(Number, UpdatedMessage, State#state.hold_back_queue),
       DeliveryQueue = State#state.delivery_queue,
       ExpectedID = case last_message_id(DeliveryQueue) of
