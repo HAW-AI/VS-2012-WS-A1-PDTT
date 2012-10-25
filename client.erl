@@ -7,10 +7,11 @@
 
 -compile([export_all]).
 
-start() ->
+start(ServerNode) ->
+  net_adm:ping(ServerNode),
   {ok, Config} = file:consult("client.cfg"),
   {servername, Servername} = lists:keyfind(servername, 1, Config),
-  ServerPID = global:whereis_name(Servername),
+  ServerPID = {Servername,ServerNode},
   log(io_lib:format("Servername ~s has Pid: ~p", [Servername, ServerPID])),
   {lifetime, Lifetime} = lists:keyfind(lifetime, 1, Config),
   NumClients = proplists:get_value(clients, Config),
@@ -18,8 +19,7 @@ start() ->
       ClientPID = spawn(fun() -> editor(ServerPID, ?INITIAL_NUMBER_OF_MESSAGES_LEFT_TO_SEND, Config) end),
       log(io_lib:format("Client Startzeit: ~p mit PID ~p",
                         [timeMilliSecond(), ClientPID])),
-      timer:apply_after(timer:seconds(Lifetime), ?MODULE, stop, [Lifetime, ClientPID]),
-      ClientPID
+      timer:apply_after(timer:seconds(Lifetime), ?MODULE, stop, [Lifetime, ClientPID])
     end, lists:seq(0, NumClients)),
   Clients.
 

@@ -22,7 +22,7 @@ start() ->
 
   ServerPID = spawn(fun() -> loop(State) end),
   {servername, ServerName} = lists:keyfind(servername, 1, State#state.config),
-  global:re_register_name(ServerName, ServerPID),
+  register(ServerName, ServerPID),
 
   log(io_lib:format("Server Startzeit: ~s mit PID ~p", [timeMilliSecond(), ServerPID])),
 
@@ -180,14 +180,17 @@ next_message(FirstPossibleID, DLQ) ->
               end, void, lists:seq(FirstPossibleID, last_message_id(DLQ)+1)).
 
 has_client_messages_left(ClientPID, State) ->
-  {ok, Client} = dict:find(ClientPID, State#state.clients),
-  CurrentClientMessageID = Client#client_info.last_message_id,
-  DeliveryQueue = State#state.delivery_queue,
+  case dict:find(ClientPID, State#state.clients) of
+      {ok, Client} -> 
+           CurrentClientMessageID = Client#client_info.last_message_id,
+           DeliveryQueue = State#state.delivery_queue,
 
-  case last_message_id(DeliveryQueue) of
-    void   -> false;
-    LastID -> CurrentClientMessageID < LastID
-  end.
+           case last_message_id(DeliveryQueue) of
+             void   -> false;
+             LastID -> CurrentClientMessageID < LastID
+           end;
+       _ -> false
+   end.
 
 increment_last_message_id(PID, State) ->
   UpdatedClients = dict:update(PID, fun(ClientInfo) ->
