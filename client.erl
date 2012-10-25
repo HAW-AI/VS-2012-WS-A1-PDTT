@@ -10,12 +10,15 @@
 start() ->
   {ok, Config} = file:consult("client.cfg"),
   {servername, Servername} = lists:keyfind(servername, 1, Config),
-  ClientPID = spawn(fun() -> editor(Servername, 5, Config) end),
-  log(io_lib:format("Client Startzeit: ~p mit PID ~p",
-                                      [timeMilliSecond(), ClientPID])),
   {lifetime, Lifetime} = lists:keyfind(lifetime, 1, Config),
-  timer:apply_after(timer:seconds(Lifetime), ?MODULE, stop, [Lifetime, ClientPID]),
-  ClientPID.
+  NumClients = proplists:get_value(clients, Config),
+  Clients = lists:map(fun(_ClientID) ->
+      ClientPID = spawn(fun() -> editor(Servername, ?INITIAL_NUMBER_OF_MESSAGES_LEFT_TO_SEND, Config) end),
+      log(io_lib:format("Client Startzeit: ~p mit PID ~p",
+                        [timeMilliSecond(), ClientPID])),
+      timer:apply_after(timer:seconds(Lifetime), ?MODULE, stop, [Lifetime, ClientPID])
+    end, lists:seq(0, NumClients)),
+  Clients.
 
 editor(ServerPID, NumberOfMessagesLeft, Config) ->
   ServerPID ! {getmsgeid, self()},
