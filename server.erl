@@ -91,7 +91,8 @@ loop(State) ->
       case should_update_delivery_queue(UpdatedHoldBackQueue, delivery_queue_limit(State), ExpectedID) of
         true -> {UpdatedUpdatedHBQ, UpdatedDLQ} = update_delivery_queue(UpdatedHoldBackQueue, DLQWithoutGap),
                 TaggedDLQ = tag_messages(diff_keys(UpdatedHoldBackQueue, UpdatedUpdatedHBQ), "Delivery-Queue", UpdatedDLQ),
-                loop(State#state{hold_back_queue=UpdatedUpdatedHBQ, delivery_queue=TaggedDLQ});
+                ShortenedDQL = enforce_delivery_queue_limit(TaggedDLQ, delivery_queue_limit(State)),
+                loop(State#state{hold_back_queue=UpdatedUpdatedHBQ, delivery_queue=ShortenedDQL});
         _    -> loop(State#state{hold_back_queue=UpdatedHoldBackQueue})
       end;
 
@@ -197,6 +198,13 @@ increment_last_message_id(PID, State) ->
 
 should_update_delivery_queue(HoldBackQueue, DeliveryQueueLimit, ExpectedID) ->
   orddict:is_key(ExpectedID, HoldBackQueue) orelse orddict:size(HoldBackQueue) > DeliveryQueueLimit div 2.
+
+enforce_delivery_queue_limit(DeliveryQueue, Limit) ->
+  NumberOfElemsToDrop = orddict:size(DeliveryQueue) - Limit,
+  case NumberOfElemsToDrop > 0 of
+    true -> orddict:from_list(lists:nthtail(NumberOfElemsToDrop, orddict:to_list(DeliveryQueue)));
+    _    -> DeliveryQueue
+  end.
 
 delivery_queue_limit(State) ->
   {dlqlimit, Limit} = lists:keyfind(dlqlimit, 1, State#state.config),
@@ -330,6 +338,18 @@ should_update_delivery_queue_test_() ->
   , ?_assert(should_update_delivery_queue(HBQ, 4, 4))
   , ?_assert(should_update_delivery_queue(HBQ, 7, 4))
   , ?_assertNot(should_update_delivery_queue(HBQ, 8, 4))
+  ].
+
+enforce_delivery_queue_limit_test_() ->
+  DLQ = orddict:new(),
+  DLQ2 = orddict:from_list([{0, "lala"}]),
+  DLQ3 = orddict:from_list([{0, "lala"}, {3, "bar"}, {1, "baz"}, {7, "nada"}]),
+  DLQ4 = orddict:from_list([{7, "nada"}]),
+
+  [
+      ?_assertEqual(DLQ, enforce_delivery_queue_limit(DLQ, 0))
+    , ?_assertEqual(DLQ4, enforce_delivery_queue_limit(DLQ3, 1))
+    , ?_assertEqual(DLQ3, enforce_delivery_queue_limit(DLQ3, 10))
   ].
 
 diff_keys_test_() ->
