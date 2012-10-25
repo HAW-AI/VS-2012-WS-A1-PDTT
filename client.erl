@@ -23,7 +23,7 @@ start() ->
   Clients.
 
 editor(ServerPID, NumberOfMessagesLeft, Config) ->
-  ServerPID ! {getmsgeid, self()},
+  ServerPID ! {getmsgid, self()},
 
   receive
     MsgID when is_integer(MsgID) ; MsgID >= 0 ->

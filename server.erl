@@ -96,7 +96,7 @@ loop(State) ->
         _    -> loop(State#state{hold_back_queue=UpdatedHoldBackQueue})
       end;
 
-    {getmsgeid, PID} ->
+    {getmsgid, PID} ->
       MsgID = State#state.current_message_number+1,
       log(io_lib:format("Message ID ~B given to ~p", [MsgID, PID])),
       PID ! MsgID,
