@@ -20,7 +20,7 @@ start(ServerNode) ->
       log(io_lib:format("Client Startzeit: ~p mit PID ~p",
                         [timeMilliSecond(), ClientPID])),
       timer:apply_after(timer:seconds(Lifetime), ?MODULE, stop, [Lifetime, ClientPID])
-    end, lists:seq(0, NumClients)),
+    end, lists:seq(1, NumClients)),
   Clients.
 
 editor(ServerPID, NumberOfMessagesLeft, Config) ->

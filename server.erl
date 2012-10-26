@@ -14,7 +14,7 @@
                 hold_back_queue=orddict:new(),  % MessageID -> Message
                 delivery_queue=orddict:new()}). % MessageID -> Message
 -record(client_info, {timer_ref,
-                      last_message_id=?FIRST_MESSAGE_ID}).
+                      last_message_id=?FIRST_MESSAGE_ID-1}).
 
 start() ->
   {ok, Config} = file:consult("server.cfg"),
