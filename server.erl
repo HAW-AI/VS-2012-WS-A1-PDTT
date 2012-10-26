@@ -64,8 +64,8 @@ loop(State) ->
       StateWithoutGap = UpdatedState#state{delivery_queue=UpdatedDLQ},
 
       case has_client_messages_left(PID, StateWithoutGap) of
-        true -> Msg = next_message_for_client(PID, StateWithoutGap),
-                UpdatedUpdatedState = increment_last_message_id(PID, StateWithoutGap),
+        true -> {ID, Msg} = next_message_for_client(PID, StateWithoutGap),
+                UpdatedUpdatedState = set_last_message_id(ID, PID, StateWithoutGap),
                 PID ! {Msg, not has_client_messages_left(PID, UpdatedUpdatedState)},
                 loop(UpdatedUpdatedState);
 
@@ -164,7 +164,7 @@ next_message_for_client(ClientPID, State) ->
   end,
 
   case orddict:find(MessageID, DeliveryQueue) of
-    {ok, Message} -> Message;
+    {ok, Message} -> {MessageID, Message};
     error         -> next_message(MessageID, DeliveryQueue)
   end.
 
@@ -172,10 +172,10 @@ next_message(FirstPossibleID, DLQ) ->
   lists:foldl(fun(ID, NextMsg) ->
                 case NextMsg of
                   void -> case orddict:find(ID, DLQ) of
-                            {ok, FoundMsg} -> FoundMsg;
+                            {ok, FoundMsg} -> {ID, FoundMsg};
                             error          -> void
                           end;
-                  FoundMsg -> FoundMsg
+                  FoundMsg -> {ID, FoundMsg}
                 end
               end, void, lists:seq(FirstPossibleID, last_message_id(DLQ)+1)).
 
@@ -192,9 +192,9 @@ has_client_messages_left(ClientPID, State) ->
        _ -> false
    end.
 
-increment_last_message_id(PID, State) ->
+set_last_message_id(ID, PID, State) ->
   UpdatedClients = dict:update(PID, fun(ClientInfo) ->
-        ClientInfo#client_info{last_message_id=ClientInfo#client_info.last_message_id+1}
+        ClientInfo#client_info{last_message_id=ID}
     end, State#state.clients),
 
   State#state{clients=UpdatedClients}.
@@ -399,10 +399,10 @@ has_client_messages_left_test_() ->
   , ?_assertNot(has_client_messages_left(PID, State3))
   ].
 
-increment_last_message_id_test_() ->
+set_last_message_id_test_() ->
   PID = spawn(fun() -> timer:sleep(infinity) end),
   State = #state{clients=dict:from_list([{PID, #client_info{last_message_id=2}}])},
-  UpdatedState = increment_last_message_id(PID, State),
+  UpdatedState = set_last_message_id(2, PID, State),
   UpdatedClient = dict:fetch(PID, UpdatedState#state.clients),
 
   [ ?_assertEqual(3, UpdatedClient#client_info.last_message_id)
