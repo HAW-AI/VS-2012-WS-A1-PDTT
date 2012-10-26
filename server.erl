@@ -345,7 +345,6 @@ should_update_delivery_queue_test_() ->
 
 enforce_delivery_queue_limit_test_() ->
   DLQ = orddict:new(),
-  DLQ2 = orddict:from_list([{0, "lala"}]),
   DLQ3 = orddict:from_list([{0, "lala"}, {3, "bar"}, {1, "baz"}, {7, "nada"}]),
   DLQ4 = orddict:from_list([{7, "nada"}]),
 
