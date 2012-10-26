@@ -53,7 +53,7 @@ reader(ServerPID, Config) ->
   ServerPID ! {getmessages, self()},
   receive
     {Message, GotAllMessages} ->
-      log(io_lib:format("Got Message ~s. messages left: ~p.", [Message, GotAllMessages])),
+      log(io_lib:format("Got Message ~s. messages left: ~p.", [Message, not GotAllMessages])),
       case GotAllMessages of
         false -> reader(ServerPID, Config);
         _ -> editor(ServerPID,
